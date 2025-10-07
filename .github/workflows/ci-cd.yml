@@ -106,7 +106,8 @@ jobs:
     environment: production
 
     steps:
-    - name: Checkout repository
+    - name: Checkout repository2025-10-06 20:45:46.837 [info] > git for-each-ref --sort -committerdate --format %(refname)%00%(objectname)%00%(*objectname) [2ms]
+
       uses: actions/checkout@v4
 
     - name: Deploy to production

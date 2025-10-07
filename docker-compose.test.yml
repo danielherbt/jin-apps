@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  # Test databases
+  test-user-db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: test_userdb
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass
+    ports:
+      - "5435:5432"
+
+  test-pos-db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: test_posdb
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass
+    ports:
+      - "5436:5432"
+
+  test-invoicing-db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: test_invoicingdb
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass
+    ports:
+      - "5437:5432"
+
+  # Test message queue
+  test-rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: testguest
+      RABBITMQ_DEFAULT_PASS: testguest

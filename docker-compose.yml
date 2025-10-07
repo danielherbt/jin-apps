@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # Databases
+  user-db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: userdb
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - user_db_data:/var/lib/postgresql/data
+
+  pos-db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: posdb
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432"
+    volumes:
+      - pos_db_data:/var/lib/postgresql/data
+
+  invoicing-db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: invoicingdb
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5434:5432"
+    volumes:
+      - invoicing_db_data:/var/lib/postgresql/data
+
+  # Message Queue
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  # Services
+  user-service:
+    build: ./user-service
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://user:password@user-db:5432/userdb
+    depends_on:
+      - user-db
+    volumes:
+      - ./user-service:/app
+
+  pos-service:
+    build: ./pos-service
+    ports:
+      - "8001:8001"
+    environment:
+      - DATABASE_URL=postgresql://user:password@pos-db:5432/posdb
+      - USER_SERVICE_URL=http://user-service:8000
+      - INVOICING_SERVICE_URL=http://invoicing-service:8002
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - pos-db
+      - user-service
+      - invoicing-service
+      - rabbitmq
+    volumes:
+      - ./pos-service:/app
+
+  invoicing-service:
+    build: ./invoicing-service
+    ports:
+      - "8002:8002"
+    environment:
+      - DATABASE_URL=postgresql://user:password@invoicing-db:5432/invoicingdb
+      - POS_SERVICE_URL=http://pos-service:8001
+      - SRI_ENVIRONMENT=test
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - invoicing-db
+      - pos-service
+      - rabbitmq
+    volumes:
+      - ./invoicing-service:/app
+      - ./certs:/app/certs
+
+volumes:
+  user_db_data:
+  pos_db_data:
+  invoicing_db_data:
+  rabbitmq_data:

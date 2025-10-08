@@ -11,7 +11,8 @@ class Settings(BaseSettings):
 
     # External services
     USER_SERVICE_URL: str = "http://user-service:8000"
-    INVOICING_SERVICE_URL: str = "http://invoicing-service:8001"
+    # INVOICING_SERVICE_URL removed to break circular dependency
+    # Communication with invoicing service will be via events/messages
 
     # RabbitMQ
     RABBITMQ_URL: str = "amqp://guest:guest@localhost:5672/"

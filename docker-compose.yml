@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Databases
   user-db:
@@ -59,6 +57,21 @@ services:
     volumes:
       - ./user-service:/app
 
+  invoicing-service:
+    build: ./invoicing-service
+    ports:
+      - "8002:8002"
+    environment:
+      - DATABASE_URL=postgresql://user:password@invoicing-db:5432/invoicingdb
+      - SRI_ENVIRONMENT=test
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - invoicing-db
+      - rabbitmq
+    volumes:
+      - ./invoicing-service:/app
+      - ./certs:/app/certs
+
   pos-service:
     build: ./pos-service
     ports:
@@ -66,32 +79,13 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@pos-db:5432/posdb
       - USER_SERVICE_URL=http://user-service:8000
-      - INVOICING_SERVICE_URL=http://invoicing-service:8002
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
     depends_on:
       - pos-db
       - user-service
-      - invoicing-service
       - rabbitmq
     volumes:
       - ./pos-service:/app
-
-  invoicing-service:
-    build: ./invoicing-service
-    ports:
-      - "8002:8002"
-    environment:
-      - DATABASE_URL=postgresql://user:password@invoicing-db:5432/invoicingdb
-      - POS_SERVICE_URL=http://pos-service:8001
-      - SRI_ENVIRONMENT=test
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
-    depends_on:
-      - invoicing-db
-      - pos-service
-      - rabbitmq
-    volumes:
-      - ./invoicing-service:/app
-      - ./certs:/app/certs
 
 volumes:
   user_db_data:

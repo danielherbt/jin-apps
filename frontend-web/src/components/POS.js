@@ -32,7 +32,7 @@ const POS = () => {
   }, [dispatch]);
 
   const handleAddItem = () => {
-    const product = products.find(p => p.id === parseInt(selectedProduct));
+    const product = products && products.find(p => p.id === parseInt(selectedProduct));
     if (product && quantity > 0) {
       dispatch(addItemToSale({
         product_id: product.id,
@@ -94,7 +94,7 @@ const POS = () => {
                   fullWidth
                 >
                   <option value="">Select a product</option>
-                  {products.map((product) => (
+                  {products && products.map((product) => (
                     <option key={product.id} value={product.id}>
                       {product.name} - ${product.price}
                     </option>

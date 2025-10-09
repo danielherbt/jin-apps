@@ -22,3 +22,6 @@ node_modules/
 
 # Format of folders
 .directory
+
+#workspace
+.code-workspace

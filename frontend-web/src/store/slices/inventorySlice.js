@@ -52,7 +52,7 @@ const inventorySlice = createSlice({
       })
       .addCase(getProducts.fulfilled, (state, action) => {
         state.loading = false;
-        state.products = action.payload;
+        state.products = Array.isArray(action.payload) ? action.payload : [];
       })
       .addCase(getProducts.rejected, (state, action) => {
         state.loading = false;

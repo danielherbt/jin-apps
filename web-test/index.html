@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS System - Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .service-card {
+            transition: transform 0.2s;
+        }
+        .service-card:hover {
+            transform: translateY(-5px);
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-online {
+            background-color: #28a745;
+            box-shadow: 0 0 5px #28a745;
+        }
+        .status-offline {
+            background-color: #dc3545;
+        }
+        .api-response {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 0.9em;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-cash-register me-2"></i>
+                Sistema POS - Microservicios
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text" id="connectionStatus">
+                    <span class="status-indicator status-offline" id="statusDot"></span>
+                    Verificando conexión...
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col">
+                <h2>
+                    <i class="fas fa-tachometer-alt me-2"></i>
+                    Dashboard del Sistema POS
+                </h2>
+                <p class="text-muted">Microservicios para Punto de Venta con Facturación Electrónica</p>
+            </div>
+        </div>
+
+        <!-- Services Status -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card service-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-users fa-3x text-primary mb-3"></i>
+                        <h5 class="card-title">User Service</h5>
+                        <p class="card-text">Puerto 8000</p>
+                        <span class="status-indicator" id="user-status"></span>
+                        <span id="user-status-text">Checking...</span>
+                        <br><br>
+                        <button class="btn btn-outline-primary btn-sm" onclick="testUserService()">
+                            <i class="fas fa-plug"></i> Probar API
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card service-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-cash-register fa-3x text-success mb-3"></i>
+                        <h5 class="card-title">POS Service</h5>
+                        <p class="card-text">Puerto 8001</p>
+                        <span class="status-indicator" id="pos-status"></span>
+                        <span id="pos-status-text">Checking...</span>
+                        <br><br>
+                        <button class="btn btn-outline-success btn-sm" onclick="testPOSService()">
+                            <i class="fas fa-plug"></i> Probar API
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card service-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-file-invoice fa-3x text-warning mb-3"></i>
+                        <h5 class="card-title">Invoicing Service</h5>
+                        <p class="card-text">Puerto 8002</p>
+                        <span class="status-indicator" id="invoicing-status"></span>
+                        <span id="invoicing-status-text">Checking...</span>
+                        <br><br>
+                        <button class="btn btn-outline-warning btn-sm" onclick="testInvoicingService()">
+                            <i class="fas fa-plug"></i> Probar API
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Testing Section -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-code me-2"></i>Pruebas de API</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Endpoint a probar:</label>
+                            <select class="form-select" id="endpointSelect">
+                                <option value="8000/health">User Service - Health Check</option>
+                                <option value="8000/api/v1/users">User Service - Get Users</option>
+                                <option value="8001/health">POS Service - Health Check</option>
+                                <option value="8001/api/v1/sales">POS Service - Get Sales</option>
+                                <option value="8001/api/v1/inventory">POS Service - Inventory</option>
+                                <option value="8002/health">Invoicing Service - Health Check</option>
+                                <option value="8002/api/v1/invoices">Invoicing Service - Get Invoices</option>
+                                <option value="8002/api/v1/invoices/sri-status">Invoicing Service - SRI Status</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="testCustomEndpoint()">
+                            <i class="fas fa-play"></i> Ejecutar Prueba
+                        </button>
+                        <button class="btn btn-secondary ms-2" onclick="testAllEndpoints()">
+                            <i class="fas fa-list-check"></i> Probar Todo
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-terminal me-2"></i>Acciones Rápidas</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-info" onclick="createTestSale()">
+                                <i class="fas fa-shopping-cart"></i> Crear Venta de Prueba
+                            </button>
+                            <button class="btn btn-warning" onclick="createTestInvoice()">
+                                <i class="fas fa-file-invoice"></i> Crear Factura de Prueba
+                            </button>
+                            <button class="btn btn-success" onclick="testLogin()">
+                                <i class="fas fa-sign-in-alt"></i> Probar Login
+                            </button>
+                            <button class="btn btn-secondary" onclick="checkAllServices()">
+                                <i class="fas fa-sync"></i> Verificar Todos los Servicios
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Response Section -->
+        <div class="row mt-4">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-code-branch me-2"></i>Respuesta de la API</h5>
+                        <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="clearResponse()">
+                            <i class="fas fa-trash"></i> Limpiar
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="apiResponse" class="api-response">
+                            Aquí aparecerán las respuestas de las APIs...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

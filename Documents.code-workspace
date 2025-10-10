@@ -6,5 +6,8 @@
 		{
 			"path": "${Documents:sworkspaceFolder}"
 		}
-	]
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "${Documents:sworkspaceFolder}"
+	}
 }

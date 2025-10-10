@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Container,
   Typography,
@@ -20,9 +20,14 @@ import {
   Alert,
   IconButton,
   Chip,
-} from '@mui/material';
-import { Add, Edit, Delete } from '@mui/icons-material';
-import { getProducts, createProduct, updateProduct, deleteProduct } from '../store/slices/inventorySlice';
+} from "@mui/material";
+import { Add, Edit, Delete } from "@mui/icons-material";
+import {
+  getProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+} from "../store/slices/inventorySlice";
 
 const Inventory = () => {
   const dispatch = useDispatch();
@@ -30,15 +35,15 @@ const Inventory = () => {
   const [open, setOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    price: '',
-    cost: '',
-    sku: '',
-    barcode: '',
-    category: '',
-    stock_quantity: '',
-    min_stock: '',
+    name: "",
+    description: "",
+    price: "",
+    cost: "",
+    sku: "",
+    barcode: "",
+    category: "",
+    stock_quantity: "",
+    min_stock: "",
     branch_id: 1, // Default branch
   });
 
@@ -50,29 +55,29 @@ const Inventory = () => {
     if (product) {
       setEditingProduct(product);
       setFormData({
-        name: product.name || '',
-        description: product.description || '',
-        price: product.price || '',
-        cost: product.cost || '',
-        sku: product.sku || '',
-        barcode: product.barcode || '',
-        category: product.category || '',
-        stock_quantity: product.stock_quantity || '',
-        min_stock: product.min_stock || '',
+        name: product.name || "",
+        description: product.description || "",
+        price: product.price || "",
+        cost: product.cost || "",
+        sku: product.sku || "",
+        barcode: product.barcode || "",
+        category: product.category || "",
+        stock_quantity: product.stock_quantity || "",
+        min_stock: product.min_stock || "",
         branch_id: product.branch_id || 1,
       });
     } else {
       setEditingProduct(null);
       setFormData({
-        name: '',
-        description: '',
-        price: '',
-        cost: '',
-        sku: '',
-        barcode: '',
-        category: '',
-        stock_quantity: '',
-        min_stock: '',
+        name: "",
+        description: "",
+        price: "",
+        cost: "",
+        sku: "",
+        barcode: "",
+        category: "",
+        stock_quantity: "",
+        min_stock: "",
         branch_id: 1,
       });
     }
@@ -94,7 +99,9 @@ const Inventory = () => {
     };
 
     if (editingProduct) {
-      await dispatch(updateProduct({ id: editingProduct.id, productData: data }));
+      await dispatch(
+        updateProduct({ id: editingProduct.id, productData: data })
+      );
     } else {
       await dispatch(createProduct(data));
     }
@@ -103,7 +110,7 @@ const Inventory = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
+    if (window.confirm("Are you sure you want to delete this product?")) {
       await dispatch(deleteProduct(id));
       dispatch(getProducts()); // Refresh list
     }
@@ -111,7 +118,12 @@ const Inventory = () => {
 
   return (
     <Container>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={3}
+      >
         <Typography variant="h4">Inventory Management</Typography>
         <Button
           variant="contained"
@@ -123,7 +135,11 @@ const Inventory = () => {
         </Button>
       </Box>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error.detail || 'An error occurred'}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error.detail || "An error occurred"}
+        </Alert>
+      )}
 
       <TableContainer component={Paper}>
         <Table>
@@ -148,16 +164,30 @@ const Inventory = () => {
                 <TableCell>{product.stock_quantity}</TableCell>
                 <TableCell>
                   <Chip
-                    label={product.stock_quantity <= product.min_stock ? 'Low Stock' : 'In Stock'}
-                    color={product.stock_quantity <= product.min_stock ? 'warning' : 'success'}
+                    label={
+                      product.stock_quantity <= product.min_stock
+                        ? "Low Stock"
+                        : "In Stock"
+                    }
+                    color={
+                      product.stock_quantity <= product.min_stock
+                        ? "warning"
+                        : "success"
+                    }
                     size="small"
                   />
                 </TableCell>
                 <TableCell>
-                  <IconButton onClick={() => handleOpen(product)} color="primary">
+                  <IconButton
+                    onClick={() => handleOpen(product)}
+                    color="primary"
+                  >
                     <Edit />
                   </IconButton>
-                  <IconButton onClick={() => handleDelete(product.id)} color="error">
+                  <IconButton
+                    onClick={() => handleDelete(product.id)}
+                    color="error"
+                  >
                     <Delete />
                   </IconButton>
                 </TableCell>
@@ -168,7 +198,9 @@ const Inventory = () => {
       </TableContainer>
 
       <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-        <DialogTitle>{editingProduct ? 'Edit Product' : 'Add Product'}</DialogTitle>
+        <DialogTitle>
+          {editingProduct ? "Edit Product" : "Add Product"}
+        </DialogTitle>
         <DialogContent>
           <Box component="form" sx={{ mt: 1 }}>
             <TextField
@@ -177,7 +209,9 @@ const Inventory = () => {
               fullWidth
               label="Name"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
             />
             <TextField
               margin="normal"
@@ -186,7 +220,9 @@ const Inventory = () => {
               multiline
               rows={2}
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
             />
             <Box display="flex" gap={2}>
               <TextField
@@ -196,7 +232,9 @@ const Inventory = () => {
                 label="Price"
                 type="number"
                 value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, price: e.target.value })
+                }
               />
               <TextField
                 margin="normal"
@@ -205,7 +243,9 @@ const Inventory = () => {
                 label="Cost"
                 type="number"
                 value={formData.cost}
-                onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, cost: e.target.value })
+                }
               />
             </Box>
             <Box display="flex" gap={2}>
@@ -215,14 +255,18 @@ const Inventory = () => {
                 fullWidth
                 label="SKU"
                 value={formData.sku}
-                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, sku: e.target.value })
+                }
               />
               <TextField
                 margin="normal"
                 fullWidth
                 label="Barcode"
                 value={formData.barcode}
-                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, barcode: e.target.value })
+                }
               />
             </Box>
             <Box display="flex" gap={2}>
@@ -231,7 +275,9 @@ const Inventory = () => {
                 fullWidth
                 label="Category"
                 value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, category: e.target.value })
+                }
               />
               <TextField
                 margin="normal"
@@ -240,7 +286,9 @@ const Inventory = () => {
                 label="Stock Quantity"
                 type="number"
                 value={formData.stock_quantity}
-                onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, stock_quantity: e.target.value })
+                }
               />
               <TextField
                 margin="normal"
@@ -248,7 +296,9 @@ const Inventory = () => {
                 label="Min Stock"
                 type="number"
                 value={formData.min_stock}
-                onChange={(e) => setFormData({ ...formData, min_stock: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, min_stock: e.target.value })
+                }
               />
             </Box>
           </Box>
@@ -256,7 +306,7 @@ const Inventory = () => {
         <DialogActions>
           <Button onClick={handleClose}>Cancel</Button>
           <Button onClick={handleSubmit} variant="contained" disabled={loading}>
-            {editingProduct ? 'Update' : 'Create'}
+            {editingProduct ? "Update" : "Create"}
           </Button>
         </DialogActions>
       </Dialog>

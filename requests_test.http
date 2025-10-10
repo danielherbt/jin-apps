@@ -1,0 +1,17 @@
+@base_url_pos_inventory = http://localhost:8001
+@base_url_pos_user = http://localhost:8000
+
+### Inventory
+GET {{base_url_pos_inventory}}/api/v1/inventory/
+### Create product
+POST {{base_url_pos_inventory}}/api/v1/inventory/
+Content-Type: application/json
+{
+
+}
+### Sales
+GET {{base_url_pos_inventory}}/api/v1/sales/
+### Create sale
+POST {{base_url_pos_inventory}}/api/v1/sales/
+### Auth Login
+POST {{base_url_pos_user}}/api/v1/auth/token

@@ -67,3 +67,7 @@ echo "🌐 Endpoints disponibles:"
 echo "   - User Service: http://localhost:8000"
 echo "   - POS Service: http://localhost:8001" 
 echo "   - Invoicing Service: http://localhost:8002"
+
+### Iniciar la aplicacion frontend-web
+cd frontend-web && npm start
+

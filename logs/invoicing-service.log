@@ -1,12 +1,7 @@
 INFO:     Will watch for changes in these directories: ['/home/daniel/Documents/invoicing-service']
 INFO:     Uvicorn running on http://0.0.0.0:8002 (Press CTRL+C to quit)
-INFO:     Started reloader process [22093] using WatchFiles
-INFO:     Started server process [22096]
+INFO:     Started reloader process [30595] using WatchFiles
+INFO:     Started server process [30604]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     127.0.0.1:43748 - "GET /health HTTP/1.1" 200 OK
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [22096]
-INFO:     Stopping reloader process [22093]
+INFO:     127.0.0.1:34462 - "GET /health HTTP/1.1" 200 OK

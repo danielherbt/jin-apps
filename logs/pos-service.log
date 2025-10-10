@@ -29,3 +29,8 @@ INFO:     127.0.0.1:59770 - "GET /api/v1/inventory/ HTTP/1.1" 307 Temporary Redi
 INFO:     127.0.0.1:59782 - "GET /api/v1/inventory HTTP/1.1" 200 OK
 INFO:     127.0.0.1:39142 - "GET /api/v1/sales/ HTTP/1.1" 307 Temporary Redirect
 INFO:     127.0.0.1:39154 - "GET /api/v1/sales HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [30580]
+INFO:     Stopping reloader process [30571]

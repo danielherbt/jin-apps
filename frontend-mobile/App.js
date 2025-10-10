@@ -6,6 +6,7 @@ import store from './src/store';
 import LoginScreen from './src/screens/LoginScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import POSScreen from './src/screens/POSScreen';
+import InventoryScreen from './src/screens/InventoryScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -28,6 +29,11 @@ export default function App() {
             name="POS"
             component={POSScreen}
             options={{ title: 'Point of Sale' }}
+          />
+          <Stack.Screen
+            name="Inventory"
+            component={InventoryScreen}
+            options={{ title: 'Inventory Management' }}
           />
         </Stack.Navigator>
       </NavigationContainer>

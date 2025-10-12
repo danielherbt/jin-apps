@@ -35,52 +35,15 @@ function App() {
               {/* Public routes */}
               <Route path="/login" element={<Login />} />
               
-              {/* Protected routes */}
+              {/* Protected routes with Dashboard layout */}
               <Route
-                path="/"
+                path="/*"
                 element={
                   <ProtectedRoute>
                     <Dashboard />
                   </ProtectedRoute>
                 }
-              >
-                <Route index element={<Navigate to="/pos" replace />} />
-                <Route
-                  path="pos"
-                  element={
-                    <ProtectedRoute roles={['user', 'manager', 'admin']}>
-                      <POS />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="inventory"
-                  element={
-                    <ProtectedRoute roles={['manager', 'admin']}>
-                      <Inventory />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="sales"
-                  element={
-                    <ProtectedRoute roles={['user', 'manager', 'admin']}>
-                      <Sales />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="branches"
-                  element={
-                    <ProtectedRoute roles={['admin']}>
-                      <Branches />
-                    </ProtectedRoute>
-                  }
-                />
-              </Route>
-              
-              {/* Catch all - redirect to home */}
-              <Route path="*" element={<Navigate to="/" replace />} />
+              />
             </Routes>
           </AuthProvider>
         </Router>

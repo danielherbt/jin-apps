@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import {
   Drawer,
   List,
@@ -18,6 +18,11 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import Header from './Header';
+import ProtectedRoute from './ProtectedRoute';
+import POS from './POS';
+import InventoryComponent from './Inventory';
+import Sales from './Sales';
+import Branches from './Branches';
 
 const drawerWidth = 240;
 
@@ -102,7 +107,41 @@ const Dashboard = () => {
           minHeight: 'calc(100vh - 64px)',
         }}
       >
-        <Outlet />
+        <Routes>
+          <Route path="/" element={<Navigate to="/pos" replace />} />
+          <Route
+            path="/pos"
+            element={
+              <ProtectedRoute roles={['user', 'manager', 'admin']}>
+                <POS />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inventory"
+            element={
+              <ProtectedRoute roles={['manager', 'admin']}>
+                <InventoryComponent />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sales"
+            element={
+              <ProtectedRoute roles={['user', 'manager', 'admin']}>
+                <Sales />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/branches"
+            element={
+              <ProtectedRoute roles={['admin']}>
+                <Branches />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
       </Box>
     </Box>
   );

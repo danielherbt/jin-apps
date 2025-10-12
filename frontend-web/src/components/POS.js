@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useState } from 'react';
 import {
   Container,
   Grid,
@@ -15,66 +14,121 @@ import {
   IconButton,
   Divider,
   Box,
+  Alert,
 } from '@mui/material';
-import { Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
-import { getProducts } from '../store/slices/inventorySlice';
-import { addItemToSale, removeItemFromSale, createSale, clearSale } from '../store/slices/posSlice';
+import { Delete as DeleteIcon, Add as AddIcon, ShoppingCart, Receipt } from '@mui/icons-material';
+import { useAuth } from '../contexts/AuthContext';
 
 const POS = () => {
-  const dispatch = useDispatch();
-  const { products } = useSelector((state) => state.inventory);
-  const { currentSale, loading: saleLoading } = useSelector((state) => state.pos);
+  const { user } = useAuth();
   const [selectedProduct, setSelectedProduct] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [currentSale, setCurrentSale] = useState({ 
+    items: [], 
+    total: 0, 
+    tax: 0, 
+    discount: 0 
+  });
+  const [successMessage, setSuccessMessage] = useState('');
+  
+  // Sample products - replace with API call
+  const products = [
+    { id: 1, name: 'Laptop Dell XPS 13', price: 1299.99, stock: 5 },
+    { id: 2, name: 'Mouse Logitech MX Master', price: 99.99, stock: 15 },
+    { id: 3, name: 'Keyboard Mechanical RGB', price: 149.99, stock: 8 },
+    { id: 4, name: 'Monitor 27 4K', price: 399.99, stock: 3 },
+    { id: 5, name: 'Webcam HD 1080p', price: 79.99, stock: 12 }
+  ];
 
-  useEffect(() => {
-    dispatch(getProducts());
-  }, [dispatch]);
+  // Calculate totals
+  const calculateTotals = (items) => {
+    const subtotal = items.reduce((sum, item) => sum + item.total_price, 0);
+    const tax = subtotal * 0.12; // 12% tax
+    return { total: subtotal, tax };
+  };
 
   const handleAddItem = () => {
-    const product = products && products.find(p => p.id === parseInt(selectedProduct));
+    const product = products.find(p => p.id === parseInt(selectedProduct));
     if (product && quantity > 0) {
-      dispatch(addItemToSale({
-        product_id: product.id,
-        product_name: product.name,
-        quantity: parseInt(quantity),
-        unit_price: product.price,
-        total_price: product.price * parseInt(quantity),
-      }));
+      const existingItemIndex = currentSale.items.findIndex(
+        item => item.product_id === product.id
+      );
+      
+      let newItems;
+      if (existingItemIndex >= 0) {
+        // Update existing item
+        newItems = [...currentSale.items];
+        newItems[existingItemIndex].quantity += parseInt(quantity);
+        newItems[existingItemIndex].total_price = 
+          newItems[existingItemIndex].quantity * product.price;
+      } else {
+        // Add new item
+        const newItem = {
+          product_id: product.id,
+          product_name: product.name,
+          quantity: parseInt(quantity),
+          unit_price: product.price,
+          total_price: product.price * parseInt(quantity),
+        };
+        newItems = [...currentSale.items, newItem];
+      }
+      
+      const totals = calculateTotals(newItems);
+      setCurrentSale({ 
+        items: newItems, 
+        ...totals,
+        discount: currentSale.discount 
+      });
       setSelectedProduct('');
       setQuantity(1);
     }
   };
 
   const handleRemoveItem = (productId) => {
-    dispatch(removeItemFromSale(productId));
+    const newItems = currentSale.items.filter(item => item.product_id !== productId);
+    const totals = calculateTotals(newItems);
+    setCurrentSale({ 
+      items: newItems, 
+      ...totals,
+      discount: currentSale.discount 
+    });
   };
 
   const handleCompleteSale = async () => {
     if (currentSale.items.length > 0) {
-      const saleData = {
-        items: currentSale.items,
-        branch_id: 1, // Should come from user context
-        user_id: 1, // Should come from auth context
-        payment_method: 'cash',
-        discount_amount: currentSale.discount,
-      };
-
-      try {
-        await dispatch(createSale(saleData)).unwrap();
-        dispatch(clearSale());
-        alert('Sale completed successfully!');
-      } catch (error) {
-        alert('Error completing sale: ' + error.detail);
-      }
+      // Simulate API call
+      setSuccessMessage(
+        `Sale completed successfully! Total: $${(currentSale.total + currentSale.tax).toFixed(2)} - User: ${user?.username}`
+      );
+      
+      // Clear sale after 3 seconds
+      setTimeout(() => {
+        setCurrentSale({ items: [], total: 0, tax: 0, discount: 0 });
+        setSuccessMessage('');
+      }, 3000);
     }
   };
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Point of Sale
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <ShoppingCart sx={{ mr: 2, fontSize: 40, color: 'primary.main' }} />
+        <Typography variant="h4" gutterBottom sx={{ m: 0 }}>
+          Point of Sale System
+        </Typography>
+      </Box>
+      
+      {successMessage && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          {successMessage}
+        </Alert>
+      )}
+      
+      {user && (
+        <Typography variant="subtitle1" sx={{ mb: 2, color: 'text.secondary' }}>
+          👤 Cashier: {user.username} | Role: {user.role}
+        </Typography>
+      )}
 
       <Grid container spacing={3}>
         {/* Product Selection */}
@@ -168,7 +222,9 @@ const POS = () => {
                 color="primary"
                 fullWidth
                 onClick={handleCompleteSale}
-                disabled={currentSale.items.length === 0 || saleLoading}
+                disabled={currentSale.items.length === 0}
+                startIcon={<Receipt />}
+                sx={{ py: 1.5 }}
               >
                 Complete Sale
               </Button>

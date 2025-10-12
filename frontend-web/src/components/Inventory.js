@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import React, { useState } from "react";
 import {
   Container,
   Typography,
@@ -21,19 +20,60 @@ import {
   IconButton,
   Chip,
 } from "@mui/material";
-import { Add, Edit, Delete } from "@mui/icons-material";
-import {
-  getProducts,
-  createProduct,
-  updateProduct,
-  deleteProduct,
-} from "../store/slices/inventorySlice";
+import { Add, Edit, Delete, Inventory2 } from "@mui/icons-material";
+import { useAuth } from '../contexts/AuthContext';
 
 const Inventory = () => {
-  const dispatch = useDispatch();
-  const { products, loading, error } = useSelector((state) => state.inventory);
+  const { user, hasAnyRole } = useAuth();
   const [open, setOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
+  
+  // Sample products - replace with API call
+  const [products, setProducts] = useState([
+    {
+      id: 1,
+      name: 'Laptop Dell XPS 13',
+      sku: 'DELL-XPS13-001',
+      category: 'Electronics',
+      price: 1299.99,
+      stock_quantity: 5,
+      min_stock: 2,
+      cost: 1000.00
+    },
+    {
+      id: 2,
+      name: 'Mouse Logitech MX Master',
+      sku: 'LOG-MX-002',
+      category: 'Accessories',
+      price: 99.99,
+      stock_quantity: 15,
+      min_stock: 5,
+      cost: 70.00
+    },
+    {
+      id: 3,
+      name: 'Keyboard Mechanical RGB',
+      sku: 'KEY-RGB-003',
+      category: 'Accessories',
+      price: 149.99,
+      stock_quantity: 8,
+      min_stock: 3,
+      cost: 100.00
+    },
+    {
+      id: 4,
+      name: 'Monitor 27 4K',
+      sku: 'MON-27-4K-004',
+      category: 'Electronics',
+      price: 399.99,
+      stock_quantity: 3,
+      min_stock: 2,
+      cost: 300.00
+    }
+  ]);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -46,10 +86,6 @@ const Inventory = () => {
     min_stock: "",
     branch_id: 1, // Default branch
   });
-
-  useEffect(() => {
-    dispatch(getProducts());
-  }, [dispatch]);
 
   const handleOpen = (product = null) => {
     if (product) {
@@ -90,6 +126,14 @@ const Inventory = () => {
   };
 
   const handleSubmit = async () => {
+    if (!hasAnyRole(['manager', 'admin'])) {
+      setError('Permission denied. You need manager or admin role.');
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    
     const data = {
       ...formData,
       price: parseFloat(formData.price),
@@ -98,42 +142,81 @@ const Inventory = () => {
       min_stock: parseInt(formData.min_stock),
     };
 
-    if (editingProduct) {
-      await dispatch(
-        updateProduct({ id: editingProduct.id, productData: data })
-      );
-    } else {
-      await dispatch(createProduct(data));
+    try {
+      if (editingProduct) {
+        // Update existing product
+        const updatedProducts = products.map(p => 
+          p.id === editingProduct.id ? { ...p, ...data } : p
+        );
+        setProducts(updatedProducts);
+        setSuccessMessage('Product updated successfully!');
+      } else {
+        // Create new product
+        const newProduct = {
+          id: Math.max(...products.map(p => p.id)) + 1,
+          ...data
+        };
+        setProducts([...products, newProduct]);
+        setSuccessMessage('Product created successfully!');
+      }
+      
+      handleClose();
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      setError('Operation failed');
+    } finally {
+      setLoading(false);
     }
-    handleClose();
-    dispatch(getProducts()); // Refresh list
   };
 
   const handleDelete = async (id) => {
+    if (!hasAnyRole(['admin'])) {
+      setError('Permission denied. Only admins can delete products.');
+      return;
+    }
+    
     if (window.confirm("Are you sure you want to delete this product?")) {
-      await dispatch(deleteProduct(id));
-      dispatch(getProducts()); // Refresh list
+      try {
+        const filteredProducts = products.filter(p => p.id !== id);
+        setProducts(filteredProducts);
+        setSuccessMessage('Product deleted successfully!');
+        setTimeout(() => setSuccessMessage(''), 3000);
+      } catch (err) {
+        setError('Delete operation failed');
+      }
     }
   };
 
   return (
     <Container>
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        mb={3}
-      >
-        <Typography variant="h4">Inventory Management</Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<Add />}
-          onClick={() => handleOpen()}
-        >
-          Add Product
-        </Button>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <Inventory2 sx={{ mr: 2, fontSize: 40, color: 'primary.main' }} />
+        <Typography variant="h4" sx={{ flexGrow: 1 }}>
+          Inventory Management
+        </Typography>
+        {hasAnyRole(['manager', 'admin']) && (
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<Add />}
+            onClick={() => handleOpen()}
+          >
+            Add Product
+          </Button>
+        )}
       </Box>
+      
+      {user && (
+        <Typography variant="subtitle1" sx={{ mb: 2, color: 'text.secondary' }}>
+          👤 User: {user.username} | Role: {user.role}
+        </Typography>
+      )}
+      
+      {successMessage && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          {successMessage}
+        </Alert>
+      )}
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -161,7 +244,7 @@ const Inventory = () => {
                 <TableCell>{product.sku}</TableCell>
                 <TableCell>{product.category}</TableCell>
                 <TableCell>${product.price}</TableCell>
-                <TableCell>{product.stock_quantity}</TableCell>await
+                <TableCell>{product.stock_quantity}</TableCell>
                 <TableCell>
                   <Chip
                     label={

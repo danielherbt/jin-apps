@@ -35,8 +35,7 @@ async def login(
         User.is_active == True
     ).first()
 
-    #if not user or not verify_password(login_data.password, user.hashed_password):
-    if not user:
+    if not user or not verify_password(login_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",

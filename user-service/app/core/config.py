@@ -1,4 +1,4 @@
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 from typing import Optional
 
 class Settings(BaseSettings):
@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     # External services
-    POS_SERVICE_URL: str = "http://pos-service:8000"
+    POS_SERVICE_URL: str = "http://pos-service:8001"
 
     class Config:
         env_file = ".env"

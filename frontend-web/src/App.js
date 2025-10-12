@@ -1,9 +1,11 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import store from './store';
+import { AuthProvider } from './contexts/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import POS from './components/POS';
@@ -28,15 +30,59 @@ function App() {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <Router>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/" element={<Dashboard />}>
-              <Route path="pos" element={<POS />} />
-              <Route path="inventory" element={<Inventory />} />
-              <Route path="sales" element={<Sales />} />
-              <Route path="branches" element={<Branches />} />
-            </Route>
-          </Routes>
+          <AuthProvider>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/login" element={<Login />} />
+              
+              {/* Protected routes */}
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Navigate to="/pos" replace />} />
+                <Route
+                  path="pos"
+                  element={
+                    <ProtectedRoute roles={['user', 'manager', 'admin']}>
+                      <POS />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="inventory"
+                  element={
+                    <ProtectedRoute roles={['manager', 'admin']}>
+                      <Inventory />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="sales"
+                  element={
+                    <ProtectedRoute roles={['user', 'manager', 'admin']}>
+                      <Sales />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="branches"
+                  element={
+                    <ProtectedRoute roles={['admin']}>
+                      <Branches />
+                    </ProtectedRoute>
+                  }
+                />
+              </Route>
+              
+              {/* Catch all - redirect to home */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </AuthProvider>
         </Router>
       </ThemeProvider>
     </Provider>

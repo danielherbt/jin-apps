@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Container,
@@ -17,12 +17,12 @@ import {
   Box,
 } from '@mui/material';
 import { Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
-import { getProducts, createProduct } from '../store/slices/inventorySlice';
+import { getProducts } from '../store/slices/inventorySlice';
 import { addItemToSale, removeItemFromSale, createSale, clearSale } from '../store/slices/posSlice';
 
 const POS = () => {
   const dispatch = useDispatch();
-  const { products, loading: productsLoading } = useSelector((state) => state.inventory);
+  const { products } = useSelector((state) => state.inventory);
   const { currentSale, loading: saleLoading } = useSelector((state) => state.pos);
   const [selectedProduct, setSelectedProduct] = useState('');
   const [quantity, setQuantity] = useState(1);

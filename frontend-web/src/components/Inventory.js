@@ -161,7 +161,7 @@ const Inventory = () => {
                 <TableCell>{product.sku}</TableCell>
                 <TableCell>{product.category}</TableCell>
                 <TableCell>${product.price}</TableCell>
-                <TableCell>{product.stock_quantity}</TableCell>
+                <TableCell>{product.stock_quantity}</TableCell>await
                 <TableCell>
                   <Chip
                     label={

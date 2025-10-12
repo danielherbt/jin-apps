@@ -4,10 +4,22 @@
 			"path": "."
 		},
 		{
-			"path": "${Documents:sworkspaceFolder}"
-		}
+			"path": "./frontend-mobile"
+		},
+		{
+			"path": "./frontend-web"
+		},
+		{
+			"path": "./user-service"
+		},
+		{
+			"path": "./pos-service"
+		},
+		{
+			"path": "./invoicing-service"
+		},
 	],
 	"settings": {
-		"liveServer.settings.multiRootWorkspaceName": "${Documents:sworkspaceFolder}"
+		"liveServer.settings.multiRootWorkspaceName": "Documents"
 	}
 }

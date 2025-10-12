@@ -21,19 +21,12 @@ app.add_middleware(
 async def health_check():
     return {"status": "healthy", "service": "pos"}
 
-# Simplified endpoints for testing
-@app.get("/api/v1/sales")
-async def get_sales():
-    return {"sales": [], "message": "Sales endpoint working"}
-
-@app.post("/api/v1/sales")
-async def create_sale(sale_data: Dict[str, Any]):
-    return {"message": "Sale created", "sale_id": "test-123"}
-
-@app.get("/api/v1/inventory")
-async def get_inventory():
-    return {"inventory": [], "message": "Inventory endpoint working"}
-
-@app.get("/api/v1/branches")
-async def get_branches():
-    return {"branches": [], "message": "Branches endpoint working"}
+# Include API routers
+try:
+    from .api.v1.endpoints import sales, inventory, branches
+    app.include_router(sales.router, prefix="/api/v1/sales", tags=["sales"])
+    app.include_router(inventory.router, prefix="/api/v1/inventory", tags=["inventory"])
+    app.include_router(branches.router, prefix="/api/v1/branches", tags=["branches"])
+except ImportError:
+    # Fallback for testing
+    pass

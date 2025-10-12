@@ -22,7 +22,11 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
                     headers={"WWW-Authenticate": "Bearer"},
                 )
             user_data = response.json()
-            return user_data
+            return {
+                "user_id": user_data.get("user_id"),
+                "username": user_data.get("user"),
+                "role": user_data.get("role")
+            }
         except httpx.RequestError:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

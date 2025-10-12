@@ -1,16 +1,12 @@
 import React from 'react';
-import { useDispatch } from 'react-redux';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
-  AppBar,
-  Toolbar,
-  Typography,
-  Button,
   Drawer,
   List,
   ListItem,
   ListItemIcon,
   ListItemText,
+  ListItemButton,
   Box,
   CssBaseline,
 } from '@mui/material';
@@ -19,68 +15,93 @@ import {
   Inventory,
   Receipt,
   Business,
-  Logout,
 } from '@mui/icons-material';
-import { logout } from '../store/slices/authSlice';
+import { useAuth } from '../contexts/AuthContext';
+import Header from './Header';
 
 const drawerWidth = 240;
 
 const Dashboard = () => {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
-
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate('/login');
-  };
+  const location = useLocation();
+  const { hasAnyRole } = useAuth();
 
   const menuItems = [
-    { text: 'POS', icon: <PointOfSale />, path: '/pos' },
-    { text: 'Inventory', icon: <Inventory />, path: '/inventory' },
-    { text: 'Sales', icon: <Receipt />, path: '/sales' },
-    { text: 'Branches', icon: <Business />, path: '/branches' },
+    { text: 'POS', icon: <PointOfSale />, path: '/pos', roles: ['user', 'manager', 'admin'] },
+    { text: 'Inventory', icon: <Inventory />, path: '/inventory', roles: ['manager', 'admin'] },
+    { text: 'Sales', icon: <Receipt />, path: '/sales', roles: ['user', 'manager', 'admin'] },
+    { text: 'Branches', icon: <Business />, path: '/branches', roles: ['admin'] },
   ];
+
+  // Filter menu items based on user role
+  const availableMenuItems = menuItems.filter(item => 
+    !item.roles || hasAnyRole(item.roles)
+  );
 
   return (
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
-      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
-        <Toolbar>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            POS System
-          </Typography>
-          <Button color="inherit" onClick={handleLogout} startIcon={<Logout />}>
-            Logout
-          </Button>
-        </Toolbar>
-      </AppBar>
+      
+      {/* Header with user info and logout */}
+      <Header />
 
+      {/* Navigation sidebar */}
       <Drawer
         variant="permanent"
         sx={{
           width: drawerWidth,
           flexShrink: 0,
-          [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
+          [`& .MuiDrawer-paper`]: { 
+            width: drawerWidth, 
+            boxSizing: 'border-box',
+            top: 64, // Account for AppBar height
+            height: 'calc(100% - 64px)',
+          },
         }}
       >
-        <Toolbar />
-        <Box sx={{ overflow: 'auto' }}>
+        <Box sx={{ overflow: 'auto', pt: 1 }}>
           <List>
-            {menuItems.map((item) => (
-              <ListItem
-                key={item.text}
-                onClick={() => navigate(item.path)}
-              >
-                <ListItemIcon>{item.icon}</ListItemIcon>
-                <ListItemText primary={item.text} />
+            {availableMenuItems.map((item) => (
+              <ListItem key={item.text} disablePadding>
+                <ListItemButton
+                  selected={location.pathname === item.path}
+                  onClick={() => navigate(item.path)}
+                  sx={{
+                    '&.Mui-selected': {
+                      backgroundColor: 'primary.main',
+                      color: 'white',
+                      '&:hover': {
+                        backgroundColor: 'primary.dark',
+                      },
+                    },
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      color: location.pathname === item.path ? 'white' : 'inherit',
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText primary={item.text} />
+                </ListItemButton>
               </ListItem>
             ))}
           </List>
         </Box>
       </Drawer>
 
-      <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
-        <Toolbar />
+      {/* Main content area */}
+      <Box 
+        component="main" 
+        sx={{ 
+          flexGrow: 1, 
+          p: 3, 
+          ml: `${drawerWidth}px`,
+          mt: '64px', // Account for AppBar height
+          minHeight: 'calc(100vh - 64px)',
+        }}
+      >
         <Outlet />
       </Box>
     </Box>

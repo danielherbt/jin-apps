@@ -1,17 +1,70 @@
-@base_url_pos_inventory = http://localhost:8001
-@base_url_pos_user = http://localhost:8000
+@base_url_pos = http://localhost:8001
+@base_url_user = http://localhost:8000
 
-### Inventory
-GET {{base_url_pos_inventory}}/api/v1/inventory/
-### Create product
-POST {{base_url_pos_inventory}}/api/v1/inventory/
-Content-Type: application/json
-{
-
-}
-### Sales
-GET {{base_url_pos_inventory}}/api/v1/sales/
-### Create sale
-POST {{base_url_pos_inventory}}/api/v1/sales/
 ### Auth Login
-POST {{base_url_pos_user}}/api/v1/auth/token
+POST {{base_url_user}}/api/v1/auth/token
+Content-Type: application/x-www-form-urlencoded
+
+username=admin&password=admin123
+
+### Auth Register
+POST {{base_url_user}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "email": "test@example.com",
+  "password": "test123",
+  "role": "user"
+}
+
+### Auth Verify Token (replace TOKEN with actual token)
+POST {{base_url_user}}/api/v1/auth/verify-token
+Content-Type: application/json
+
+{
+  "token": "TOKEN"
+}
+
+### Get Inventory (requires auth token)
+GET {{base_url_pos}}/api/v1/inventory/
+Authorization: Bearer TOKEN
+
+### Create Product (requires auth token)
+POST {{base_url_pos}}/api/v1/inventory/
+Content-Type: application/json
+Authorization: Bearer TOKEN
+
+{
+  "name": "Test Product",
+  "sku": "TEST001",
+  "description": "Test product description",
+  "price": 10.99,
+  "stock_quantity": 100,
+  "branch_id": 1
+}
+
+### Get Sales (requires auth token)
+GET {{base_url_pos}}/api/v1/sales/
+Authorization: Bearer TOKEN
+
+### Create Sale (requires auth token)
+POST {{base_url_pos}}/api/v1/sales/
+Content-Type: application/json
+Authorization: Bearer TOKEN
+
+{
+  "items": [
+    {
+      "product_id": 1,
+      "product_name": "Test Product",
+      "quantity": 2,
+      "unit_price": 10.99,
+      "total_price": 21.98
+    }
+  ],
+  "payment_method": "cash",
+  "branch_id": 1,
+  "customer_name": "Test Customer",
+  "discount_amount": 0
+}

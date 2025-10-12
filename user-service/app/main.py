@@ -1,10 +1,28 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict, Any
+import traceback
+import sys
+import os
+
+# Add the parent directory to sys.path so we can import app modules
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Import auth router
+auth_router = None
 try:
-    from .api.v1.endpoints import auth
-except ImportError:
-    auth = None
+    from app.api.v1.endpoints.auth import router as auth_router
+    print(f"✅ Auth router imported successfully")
+except ImportError as e:
+    print(f"❌ Failed to import auth router: {e}")
+    print(f"Current working directory: {os.getcwd()}")
+    print(f"Python path: {sys.path}")
+    traceback.print_exc()
+    auth_router = None
+except Exception as e:
+    print(f"❌ Unexpected error importing auth router: {e}")
+    traceback.print_exc()
+    auth_router = None
 
 app = FastAPI(
     title="User Management Service",
@@ -22,21 +40,17 @@ app.add_middleware(
 )
 
 # Include routers if available
-if auth:
-    app.include_router(auth.router, prefix="/api/v1/auth", tags=["authentication"])
+if auth_router:
+    app.include_router(auth_router, prefix="/api/v1/auth", tags=["authentication"])
+    print(f"✅ Auth router included in FastAPI app")
+else:
+    print(f"❌ Warning: Auth router was not included in FastAPI app")
 
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "service": "user"}
 
-# Simplified endpoints for testing
+# Additional endpoints
 @app.get("/api/v1/users")
 async def get_users():
     return {"users": [], "message": "Users endpoint working"}
-
-@app.post("/api/v1/auth/login")
-async def login(credentials: Dict[str, Any]):
-    username = credentials.get("username")
-    if username == "admin":
-        return {"access_token": "fake-token", "token_type": "bearer"}
-    return {"error": "Invalid credentials"}

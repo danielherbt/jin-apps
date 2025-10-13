@@ -6,6 +6,8 @@ const API_BASE_URL = process.env.REACT_APP_USER_SERVICE_URL || 'http://localhost
 class AuthService {
   constructor() {
     this.setupAxiosInterceptors();
+    this.userPermissions = [];
+    this.availableRoles = [];
   }
 
   // Setup axios interceptors for automatic token handling
@@ -40,26 +42,25 @@ class AuthService {
   // Login with username and password
   async login(credentials) {
     try {
-      const formData = new FormData();
-      formData.append('username', credentials.username);
-      formData.append('password', credentials.password);
+      const loginData = {
+        username: credentials.username,
+        password: credentials.password,
+      };
 
-      const response = await axios.post(`${API_BASE_URL}/api/v1/auth/login`, formData, {
+      const response = await axios.post(`${API_BASE_URL}/api/v1/auth/login`, loginData, {
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Type': 'application/json',
         },
       });
 
-      const { access_token, token_type } = response.data;
+      const { access_token, token_type, user } = response.data;
       this.setToken(access_token);
       
-      // Get user info from token
-      const userInfo = this.getUserFromToken(access_token);
-      
+      // For simple-login, user info comes directly in response
       return {
         token: access_token,
         tokenType: token_type,
-        user: userInfo,
+        user: user,
       };
     } catch (error) {
       throw new Error(error.response?.data?.detail || 'Login failed');
@@ -82,11 +83,16 @@ class AuthService {
       const tokenToVerify = token || this.getToken();
       if (!tokenToVerify) return false;
 
-      const response = await axios.post(`${API_BASE_URL}/api/v1/auth/verify-token`, {}, {
+      // Handle test tokens (simple-login endpoint)
+      if (tokenToVerify.startsWith('test-token-')) {
+        return true; // Test tokens are always valid for development
+      }
+
+      const response = await axios.get(`${API_BASE_URL}/api/v1/auth/me`, {
         headers: { Authorization: `Bearer ${tokenToVerify}` }
       });
       
-      return response.data.valid;
+      return response.status === 200;
     } catch (error) {
       console.error('Token verification failed:', error);
       return false;
@@ -128,11 +134,17 @@ class AuthService {
       const tokenToCheck = token || this.getToken();
       if (!tokenToCheck) return true;
 
+      // Handle test tokens (simple-login endpoint)
+      if (tokenToCheck.startsWith('test-token-')) {
+        return false; // Test tokens don't expire for development
+      }
+
       const decoded = jwtDecode(tokenToCheck);
       const currentTime = Date.now() / 1000;
       
       return decoded.exp < currentTime;
     } catch (error) {
+      // If token can't be decoded, assume it's expired
       return true;
     }
   }
@@ -142,6 +154,19 @@ class AuthService {
     try {
       const tokenToDeconstruct = token || this.getToken();
       if (!tokenToDeconstruct) return null;
+
+      // Handle test tokens (simple-login endpoint)
+      if (tokenToDeconstruct.startsWith('test-token-')) {
+        const username = tokenToDeconstruct.replace('test-token-', '');
+        // Return basic user info for test tokens
+        const testUsers = {
+          'admin': { username: 'admin', role: 'admin' },
+          'manager': { username: 'manager', role: 'manager' },
+          'cashier': { username: 'cashier', role: 'cashier' },
+          'viewer': { username: 'viewer', role: 'viewer' }
+        };
+        return testUsers[username] || { username, role: 'user' };
+      }
 
       const decoded = jwtDecode(tokenToDeconstruct);
       return {
@@ -172,6 +197,139 @@ class AuthService {
     return {
       'Content-Type': 'application/json',
     };
+  }
+
+  // === RBAC METHODS ===
+
+  // Check if user has specific permission
+  async hasPermission(permission) {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/v1/auth/check-permission`, {
+        permission: permission
+      });
+      return response.data.has_permission;
+    } catch (error) {
+      console.error('Permission check failed:', error);
+      return false;
+    }
+  }
+
+  // Check if user has any of the provided permissions
+  async hasAnyPermission(permissions) {
+    if (!Array.isArray(permissions)) {
+      return this.hasPermission(permissions);
+    }
+    
+    try {
+      const checks = await Promise.all(
+        permissions.map(perm => this.hasPermission(perm))
+      );
+      return checks.some(result => result === true);
+    } catch (error) {
+      console.error('Multiple permission check failed:', error);
+      return false;
+    }
+  }
+
+  // Get user permissions
+  async getUserPermissions() {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/v1/auth/permissions`);
+      this.userPermissions = response.data;
+      return response.data;
+    } catch (error) {
+      console.error('Get permissions failed:', error);
+      return [];
+    }
+  }
+
+  // Get available roles
+  async getAvailableRoles() {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/v1/auth/roles`);
+      this.availableRoles = response.data;
+      return response.data;
+    } catch (error) {
+      console.error('Get roles failed:', error);
+      return [];
+    }
+  }
+
+  // Create user (admin only)
+  async createUser(userData) {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/v1/auth/register`, userData);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.detail || 'User creation failed');
+    }
+  }
+
+  // Get all users (admin/manager)
+  async getUsers(page = 1, limit = 50) {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/v1/auth/users`, {
+        params: { skip: (page - 1) * limit, limit }
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.detail || 'Get users failed');
+    }
+  }
+
+  // Update user (admin/manager)
+  async updateUser(userId, userData) {
+    try {
+      const response = await axios.put(`${API_BASE_URL}/api/v1/auth/users/${userId}`, userData);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.detail || 'User update failed');
+    }
+  }
+
+  // Delete user (admin only)
+  async deleteUser(userId) {
+    try {
+      const response = await axios.delete(`${API_BASE_URL}/api/v1/auth/users/${userId}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.detail || 'User deletion failed');
+    }
+  }
+
+  // Check if user has legacy role (for compatibility)
+  hasRole(role) {
+    const user = this.getUserFromToken();
+    if (!user) return false;
+    
+    // Handle test tokens
+    if (typeof user.role === 'string') {
+      return user.role === role;
+    }
+    return false;
+  }
+
+  // Check if user has any of the legacy roles (for compatibility)
+  hasAnyRole(roles) {
+    if (!Array.isArray(roles)) {
+      return this.hasRole(roles);
+    }
+    return roles.some(role => this.hasRole(role));
+  }
+
+  // Get cached permissions (for quick checks)
+  getCachedPermissions() {
+    return this.userPermissions;
+  }
+
+  // Setup admin user (first time setup)
+  async setupAdmin() {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/v1/auth/setup-admin`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.detail || 'Admin setup failed');
+    }
   }
 }
 

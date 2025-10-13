@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useReducer } from 'react';
+import React, { createContext, useContext, useEffect, useReducer, useCallback } from 'react';
 import authService from '../services/authService';
 
 const AuthContext = createContext();
@@ -17,6 +17,11 @@ const AUTH_ACTIONS = {
   LOGOUT: 'LOGOUT',
   SET_USER: 'SET_USER',
   CLEAR_ERROR: 'CLEAR_ERROR',
+  SET_PERMISSIONS: 'SET_PERMISSIONS',
+  SET_ROLES: 'SET_ROLES',
+  SET_PERMISSION_CACHE: 'SET_PERMISSION_CACHE',
+  PERMISSION_CHECK_START: 'PERMISSION_CHECK_START',
+  PERMISSION_CHECK_END: 'PERMISSION_CHECK_END',
 };
 
 // Initial state
@@ -25,6 +30,10 @@ const initialState = {
   isAuthenticated: false,
   loading: true,
   error: null,
+  permissions: [],
+  roles: [],
+  permissionCache: new Map(),
+  permissionChecking: false,
 };
 
 // Reducer function
@@ -54,6 +63,18 @@ const authReducer = (state, action) => {
       return { ...state, user: action.payload };
     case AUTH_ACTIONS.CLEAR_ERROR:
       return { ...state, error: null };
+    case AUTH_ACTIONS.SET_PERMISSIONS:
+      return { ...state, permissions: action.payload };
+    case AUTH_ACTIONS.SET_ROLES:
+      return { ...state, roles: action.payload };
+    case AUTH_ACTIONS.SET_PERMISSION_CACHE:
+      const newCache = new Map(state.permissionCache);
+      newCache.set(action.payload.key, action.payload.value);
+      return { ...state, permissionCache: newCache };
+    case AUTH_ACTIONS.PERMISSION_CHECK_START:
+      return { ...state, permissionChecking: true };
+    case AUTH_ACTIONS.PERMISSION_CHECK_END:
+      return { ...state, permissionChecking: false };
     default:
       return state;
   }
@@ -69,6 +90,41 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
+
+  const logout = async () => {
+    try {
+      authService.logout();
+      dispatch({ type: AUTH_ACTIONS.LOGOUT });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  // Load user permissions from backend
+  const loadPermissions = useCallback(async () => {
+    if (!state.isAuthenticated) return [];
+
+    try {
+      const permissions = await authService.getUserPermissions();
+      dispatch({ type: AUTH_ACTIONS.SET_PERMISSIONS, payload: permissions });
+      return permissions;
+    } catch (error) {
+      console.error('Failed to load permissions:', error);
+      return [];
+    }
+  }, [state.isAuthenticated]);
+
+  // Load available roles from backend
+  const loadRoles = useCallback(async () => {
+    try {
+      const roles = await authService.getAvailableRoles();
+      dispatch({ type: AUTH_ACTIONS.SET_ROLES, payload: roles });
+      return roles;
+    } catch (error) {
+      console.error('Failed to load roles:', error);
+      return [];
+    }
+  }, []);
 
   // Initialize authentication state on mount
   useEffect(() => {
@@ -103,6 +159,14 @@ export const AuthProvider = ({ children }) => {
     initializeAuth();
   }, []);
 
+  // Load permissions when user is authenticated
+  useEffect(() => {
+    if (state.isAuthenticated && state.user) {
+      loadPermissions();
+      loadRoles();
+    }
+  }, [state.isAuthenticated, state.user, loadPermissions, loadRoles]);
+
   const login = async (credentials) => {
     dispatch({ type: AUTH_ACTIONS.LOGIN_START });
     try {
@@ -127,14 +191,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = async () => {
-    try {
-      authService.logout();
-      dispatch({ type: AUTH_ACTIONS.LOGOUT });
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
 
   const getCurrentUser = async () => {
     try {
@@ -169,23 +225,136 @@ export const AuthProvider = ({ children }) => {
     return roles.some(role => state.user?.role === role);
   };
 
+  // === RBAC METHODS ===
+
+
+
+  // Check if user has specific permission
+  const hasPermission = useCallback(async (permission) => {
+    if (!state.isAuthenticated) return false;
+    
+    // Check cache first
+    if (state.permissionCache.has(permission)) {
+      return state.permissionCache.get(permission);
+    }
+    
+    dispatch({ type: AUTH_ACTIONS.PERMISSION_CHECK_START });
+    try {
+      const result = await authService.hasPermission(permission);
+      dispatch({
+        type: AUTH_ACTIONS.SET_PERMISSION_CACHE,
+        payload: { key: permission, value: result }
+      });
+      return result;
+    } catch (error) {
+      console.error('Permission check failed:', error);
+      return false;
+    } finally {
+      dispatch({ type: AUTH_ACTIONS.PERMISSION_CHECK_END });
+    }
+  }, [state.isAuthenticated, state.permissionCache]);
+
+  // Check if user has any of the provided permissions
+  const hasAnyPermission = useCallback(async (permissions) => {
+    if (!Array.isArray(permissions)) {
+      return hasPermission(permissions);
+    }
+    
+    try {
+      const results = await Promise.all(
+        permissions.map(perm => hasPermission(perm))
+      );
+      return results.some(result => result === true);
+    } catch (error) {
+      console.error('Multiple permission check failed:', error);
+      return false;
+    }
+  }, [hasPermission]);
+
+  // Sync check for permissions (uses cached values only)
+  const hasPermissionSync = useCallback((permission) => {
+    return state.permissionCache.get(permission) || false;
+  }, [state.permissionCache]);
+
+  // Clear permission cache
+  const clearPermissionCache = useCallback(() => {
+    dispatch({ type: AUTH_ACTIONS.SET_PERMISSION_CACHE, payload: { key: null, value: null } });
+  }, []);
+
+  // Create user (admin only)
+  const createUser = useCallback(async (userData) => {
+    try {
+      return await authService.createUser(userData);
+    } catch (error) {
+      console.error('Create user failed:', error);
+      throw error;
+    }
+  }, []);
+
+  // Get all users (admin/manager)
+  const getUsers = useCallback(async (page = 1, limit = 50) => {
+    try {
+      return await authService.getUsers(page, limit);
+    } catch (error) {
+      console.error('Get users failed:', error);
+      throw error;
+    }
+  }, []);
+
+  // Update user (admin/manager)
+  const updateUser = useCallback(async (userId, userData) => {
+    try {
+      return await authService.updateUser(userId, userData);
+    } catch (error) {
+      console.error('Update user failed:', error);
+      throw error;
+    }
+  }, []);
+
+  // Delete user (admin only)
+  const deleteUser = useCallback(async (userId) => {
+    try {
+      return await authService.deleteUser(userId);
+    } catch (error) {
+      console.error('Delete user failed:', error);
+      throw error;
+    }
+  }, []);
+
   const value = {
     // State
     user: state.user,
     isAuthenticated: state.isAuthenticated,
     loading: state.loading,
     error: state.error,
+    permissions: state.permissions,
+    roles: state.roles,
+    permissionChecking: state.permissionChecking,
 
-    // Actions
+    // Authentication Actions
     login,
     register,
     logout,
     getCurrentUser,
     refreshUserInfo,
 
-    // Utilities
+    // Legacy Role Utilities (for compatibility)
     hasRole,
     hasAnyRole,
+
+    // RBAC Permission Methods
+    hasPermission,
+    hasAnyPermission,
+    hasPermissionSync,
+    loadPermissions,
+    loadRoles,
+    clearPermissionCache,
+
+    // User Management (RBAC)
+    createUser,
+    getUsers,
+    updateUser,
+    deleteUser,
 
     // Clear error
     clearError: () => dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR }),

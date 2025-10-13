@@ -33,9 +33,11 @@ import {
   Email,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { useAdminPermissions } from '../hooks/usePermissions';
 
 const Branches = () => {
-  const { user, hasRole } = useAuth();
+  const { user } = useAuth();
+  const adminPermissions = useAdminPermissions();
   const [open, setOpen] = useState(false);
   const [editingBranch, setEditingBranch] = useState(null);
   const [error, setError] = useState('');
@@ -87,8 +89,8 @@ const Branches = () => {
     }
   ]);
   
-  // Check if user has admin role for branch management
-  const canManageBranches = hasRole('admin');
+  // Check if user has permissions for branch management
+  const canManageBranches = adminPermissions.canManageBranches;
   
   const handleOpen = (branch = null) => {
     if (branch) {
@@ -177,7 +179,7 @@ const Branches = () => {
   const totalEmployees = branches.reduce((sum, branch) => sum + branch.employees, 0);
   
   return (
-    <Container>
+    <Container sx={{ mt: 1 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
         <Business sx={{ mr: 2, fontSize: 40, color: 'primary.main' }} />
         <Typography variant="h4" sx={{ flexGrow: 1 }}>

@@ -65,8 +65,8 @@ const Header = () => {
   }
 
   return (
-    <AppBar position="static" elevation={1}>
-      <Toolbar>
+    <AppBar position="fixed" elevation={1} sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+      <Toolbar sx={{ minHeight: '64px !important' }}>
         <Dashboard sx={{ mr: 2 }} />
         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
           POS System

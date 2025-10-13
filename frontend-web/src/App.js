@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -8,10 +8,6 @@ import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
-import POS from './components/POS';
-import Inventory from './components/Inventory';
-import Sales from './components/Sales';
-import Branches from './components/Branches';
 
 const theme = createTheme({
   palette: {
@@ -23,6 +19,7 @@ const theme = createTheme({
     },
   },
 });
+
 
 function App() {
   return (

@@ -71,7 +71,7 @@ const Sales = () => {
   const averageTransaction = totalSales / totalTransactions || 0;
   
   return (
-    <Container>
+    <Container sx={{ mt: 1 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
         <TrendingUp sx={{ mr: 2, fontSize: 40, color: 'primary.main' }} />
         <Typography variant="h4" sx={{ flexGrow: 1 }}>

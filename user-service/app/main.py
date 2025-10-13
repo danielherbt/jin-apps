@@ -24,6 +24,18 @@ except Exception as e:
     traceback.print_exc()
     auth_router = None
 
+# Import RBAC router
+rbac_router = None
+try:
+    from app.api.v1.endpoints.rbac import router as rbac_router
+    print(f"✅ RBAC router imported successfully")
+except ImportError as e:
+    print(f"❌ Failed to import RBAC router: {e}")
+    rbac_router = None
+except Exception as e:
+    print(f"❌ Unexpected error importing RBAC router: {e}")
+    rbac_router = None
+
 app = FastAPI(
     title="User Management Service",
     version="1.0.0",
@@ -45,6 +57,12 @@ if auth_router:
     print(f"✅ Auth router included in FastAPI app")
 else:
     print(f"❌ Warning: Auth router was not included in FastAPI app")
+
+if rbac_router:
+    app.include_router(rbac_router, prefix="/api/v1/rbac", tags=["rbac"])
+    print(f"✅ RBAC router included in FastAPI app")
+else:
+    print(f"❌ Warning: RBAC router was not included in FastAPI app")
 
 @app.get("/health")
 async def health_check():

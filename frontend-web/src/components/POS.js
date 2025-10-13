@@ -18,9 +18,11 @@ import {
 } from '@mui/material';
 import { Delete as DeleteIcon, Add as AddIcon, ShoppingCart, Receipt } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { usePOSPermissions } from '../hooks/usePermissions';
 
 const POS = () => {
   const { user } = useAuth();
+  const permissions = usePOSPermissions();
   const [selectedProduct, setSelectedProduct] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [currentSale, setCurrentSale] = useState({ 
@@ -48,6 +50,12 @@ const POS = () => {
   };
 
   const handleAddItem = () => {
+    if (!permissions.canCreateSale) {
+      setSuccessMessage('You do not have permission to create sales.');
+      setTimeout(() => setSuccessMessage(''), 3000);
+      return;
+    }
+    
     const product = products.find(p => p.id === parseInt(selectedProduct));
     if (product && quantity > 0) {
       const existingItemIndex = currentSale.items.findIndex(
@@ -95,6 +103,12 @@ const POS = () => {
   };
 
   const handleCompleteSale = async () => {
+    if (!permissions.canCreateSale) {
+      setSuccessMessage('You do not have permission to complete sales.');
+      setTimeout(() => setSuccessMessage(''), 3000);
+      return;
+    }
+    
     if (currentSale.items.length > 0) {
       // Simulate API call
       setSuccessMessage(
@@ -110,7 +124,7 @@ const POS = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4 }}>
+    <Container maxWidth="lg" sx={{ mt: 1 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
         <ShoppingCart sx={{ mr: 2, fontSize: 40, color: 'primary.main' }} />
         <Typography variant="h4" gutterBottom sx={{ m: 0 }}>

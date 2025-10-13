@@ -22,9 +22,11 @@ import {
 } from "@mui/material";
 import { Add, Edit, Delete, Inventory2 } from "@mui/icons-material";
 import { useAuth } from '../contexts/AuthContext';
+import { useInventoryPermissions } from '../hooks/usePermissions';
 
 const Inventory = () => {
-  const { user, hasAnyRole } = useAuth();
+  const { user } = useAuth();
+  const permissions = useInventoryPermissions();
   const [open, setOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -126,8 +128,9 @@ const Inventory = () => {
   };
 
   const handleSubmit = async () => {
-    if (!hasAnyRole(['manager', 'admin'])) {
-      setError('Permission denied. You need manager or admin role.');
+    const canCreate = editingProduct ? permissions.canUpdateProduct : permissions.canCreateProduct;
+    if (!canCreate) {
+      setError(`Permission denied. You don't have permission to ${editingProduct ? 'update' : 'create'} products.`);
       return;
     }
     
@@ -170,8 +173,8 @@ const Inventory = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!hasAnyRole(['admin'])) {
-      setError('Permission denied. Only admins can delete products.');
+    if (!permissions.canDeleteProduct) {
+      setError('Permission denied. You don\'t have permission to delete products.');
       return;
     }
     
@@ -188,13 +191,13 @@ const Inventory = () => {
   };
 
   return (
-    <Container>
+    <Container sx={{ mt: 1 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
         <Inventory2 sx={{ mr: 2, fontSize: 40, color: 'primary.main' }} />
         <Typography variant="h4" sx={{ flexGrow: 1 }}>
           Inventory Management
         </Typography>
-        {hasAnyRole(['manager', 'admin']) && (
+        {permissions.canCreateProduct && (
           <Button
             variant="contained"
             color="primary"

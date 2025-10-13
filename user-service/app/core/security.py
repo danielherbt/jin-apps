@@ -55,8 +55,8 @@ def create_access_token(
         "username": user.username,
         "email": user.email,
         "full_name": user.full_name,
-        "role": user.role.value,
-        "permissions": [perm.value for perm in user.permissions],
+        "role": user.role.name if user.role else "no_role",
+        "permissions": user.permissions if isinstance(user.permissions, list) else [perm.value for perm in user.permissions],
         "branch_id": user.branch_id,
         "is_superuser": user.is_superuser,
         "is_active": user.is_active,
@@ -103,11 +103,22 @@ def verify_token(token: str) -> Optional[TokenData]:
         if not user_id or not username:
             return None
         
-        # Crear TokenData
+        # Crear TokenData con compatibilidad RBAC
+        role_name = payload.get("role", "viewer")
+        
+        # Mapear string de rol a enum para compatibilidad
+        role_mapping = {
+            "admin": UserRole.ADMIN,
+            "manager": UserRole.MANAGER,
+            "cashier": UserRole.CASHIER,
+            "viewer": UserRole.VIEWER
+        }
+        role_enum = role_mapping.get(role_name, UserRole.VIEWER)
+        
         token_data = TokenData(
             user_id=int(user_id),
             username=username,
-            role=UserRole(payload.get("role", "viewer")),
+            role=role_enum,
             permissions=payload.get("permissions", []),
             branch_id=payload.get("branch_id"),
             is_superuser=payload.get("is_superuser", False),

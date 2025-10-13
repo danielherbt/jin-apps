@@ -15,43 +15,98 @@ import {
   Inventory,
   Receipt,
   Business,
+  People,
+  Security,
 } from '@mui/icons-material';
-import { useAuth } from '../contexts/AuthContext';
+/*import { useAuth } from '../contexts/AuthContext';*/
+import { usePOSPermissions, useInventoryPermissions, useReportsPermissions, useAdminPermissions } from '../hooks/usePermissions';
 import Header from './Header';
 import ProtectedRoute from './ProtectedRoute';
 import POS from './POS';
 import InventoryComponent from './Inventory';
 import Sales from './Sales';
 import Branches from './Branches';
+import UserManagement from './UserManagement';
+import RBACDemo from './RBACDemo';
 
 const drawerWidth = 240;
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { hasAnyRole } = useAuth();
+  /*const { user } = useAuth();*/
+  
+  // Get permission hooks
+  const posPermissions = usePOSPermissions();
+  const inventoryPermissions = useInventoryPermissions();
+  const salesPermissions = useReportsPermissions();
+  const adminPermissions = useAdminPermissions();
 
   const menuItems = [
-    { text: 'POS', icon: <PointOfSale />, path: '/pos', roles: ['user', 'manager', 'admin'] },
-    { text: 'Inventory', icon: <Inventory />, path: '/inventory', roles: ['manager', 'admin'] },
-    { text: 'Sales', icon: <Receipt />, path: '/sales', roles: ['user', 'manager', 'admin'] },
-    { text: 'Branches', icon: <Business />, path: '/branches', roles: ['admin'] },
+    { 
+      text: 'POS', 
+      icon: <PointOfSale />, 
+      path: '/pos', 
+      permissions: ['create_sale', 'read_sale'],
+      hasAccess: posPermissions.canCreateSale || posPermissions.canReadSale,
+      loading: posPermissions.loading
+    },
+    { 
+      text: 'Inventory', 
+      icon: <Inventory />, 
+      path: '/inventory', 
+      permissions: ['read_product', 'create_product', 'update_product'],
+      hasAccess: inventoryPermissions.canReadProduct,
+      loading: inventoryPermissions.loading
+    },
+    { 
+      text: 'Sales', 
+      icon: <Receipt />, 
+      path: '/sales', 
+      permissions: ['read_sale', 'view_reports'],
+      hasAccess: salesPermissions.canViewReports || posPermissions.canReadSale,
+      loading: salesPermissions.loading || posPermissions.loading
+    },
+    { 
+      text: 'Branches', 
+      icon: <Business />, 
+      path: '/branches', 
+      permissions: ['read_branch', 'create_branch', 'update_branch'],
+      hasAccess: adminPermissions.canManageBranches,
+      loading: adminPermissions.loading
+    },
+    { 
+      text: 'Users', 
+      icon: <People />, 
+      path: '/users', 
+      permissions: ['read_user', 'create_user', 'update_user'],
+      hasAccess: adminPermissions.canManageUsers,
+      loading: adminPermissions.loading
+    },
+    { 
+      text: 'RBAC Demo', 
+      icon: <Security />, 
+      path: '/rbac-demo', 
+      permissions: [], // Always accessible for demo
+      hasAccess: true,
+      loading: false
+    },
   ];
 
-  // Filter menu items based on user role
-  const availableMenuItems = menuItems.filter(item => 
-    !item.roles || hasAnyRole(item.roles)
-  );
+  // Filter menu items based on RBAC permissions
+  const availableMenuItems = menuItems.filter(item => item.hasAccess);
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
       <CssBaseline />
       
       {/* Header with user info and logout */}
       <Header />
-
-      {/* Navigation sidebar */}
-      <Drawer
+      
+      {/* Main content container */}
+      <Box sx={{ display: 'flex', mt: '64px' }}>
+        {/* Navigation sidebar */}
+        <Drawer
         variant="permanent"
         sx={{
           width: drawerWidth,
@@ -59,8 +114,8 @@ const Dashboard = () => {
           [`& .MuiDrawer-paper`]: { 
             width: drawerWidth, 
             boxSizing: 'border-box',
-            top: 64, // Account for AppBar height
-            height: 'calc(100% - 64px)',
+            position: 'relative',
+            height: 'calc(100vh - 64px)',
           },
         }}
       >
@@ -96,23 +151,26 @@ const Dashboard = () => {
         </Box>
       </Drawer>
 
-      {/* Main content area */}
-      <Box 
-        component="main" 
-        sx={{ 
-          flexGrow: 1, 
-          p: 3, 
-          ml: `${drawerWidth}px`,
-          mt: '64px', // Account for AppBar height
-          minHeight: 'calc(100vh - 64px)',
-        }}
+        {/* Main content area */}
+        <Box 
+          component="main" 
+          sx={{ 
+            flexGrow: 1, 
+            p: 2, 
+            minHeight: 'calc(100vh - 64px)',
+            backgroundColor: '#f5f5f5',
+            overflow: 'auto',
+          }}
       >
         <Routes>
           <Route path="/" element={<Navigate to="/pos" replace />} />
           <Route
             path="/pos"
             element={
-              <ProtectedRoute roles={['user', 'manager', 'admin']}>
+              <ProtectedRoute 
+                permissions={['create_sale', 'read_sale']}
+                requireAll={false}
+              >
                 <POS />
               </ProtectedRoute>
             }
@@ -120,7 +178,10 @@ const Dashboard = () => {
           <Route
             path="/inventory"
             element={
-              <ProtectedRoute roles={['manager', 'admin']}>
+              <ProtectedRoute 
+                permissions={['read_product']}
+                requireAll={false}
+              >
                 <InventoryComponent />
               </ProtectedRoute>
             }
@@ -128,7 +189,10 @@ const Dashboard = () => {
           <Route
             path="/sales"
             element={
-              <ProtectedRoute roles={['user', 'manager', 'admin']}>
+              <ProtectedRoute 
+                permissions={['read_sale', 'view_reports']}
+                requireAll={false}
+              >
                 <Sales />
               </ProtectedRoute>
             }
@@ -136,12 +200,31 @@ const Dashboard = () => {
           <Route
             path="/branches"
             element={
-              <ProtectedRoute roles={['admin']}>
+              <ProtectedRoute 
+                permissions={['read_branch']}
+                requireAll={false}
+              >
                 <Branches />
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/users"
+            element={
+              <ProtectedRoute 
+                permissions={['read_user']}
+                requireAll={false}
+              >
+                <UserManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/rbac-demo"
+            element={<RBACDemo />}
+          />
         </Routes>
+        </Box>
       </Box>
     </Box>
   );

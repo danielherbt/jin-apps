@@ -73,9 +73,10 @@ const Login = () => {
 
   return (
     <>
-      <Container maxWidth="sm" sx={{ mt: 8 }}>
-        <Card>
-          <CardContent sx={{ p: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', p: 2 }}>
+        <Container maxWidth="sm">
+          <Card sx={{ border: '1px solid #310727ff', borderRadius: 2 }}>
+            <CardContent sx={{ p: 4 }}>
             <Typography variant="h4" align="center" gutterBottom>
               🏪 POS System
             </Typography>
@@ -178,14 +179,15 @@ const Login = () => {
               </Button>
             </Box>
           )}
-        </CardContent>
-      </Card>
-    </Container>
+            </CardContent>
+          </Card>
+        </Container>
+      </Box>
     
     {/* Success notification */}
     <Snackbar
       open={showSuccess}
-      autoHideDuration={4000}
+      autoHideDuration={6000}
       onClose={() => setShowSuccess(false)}
       anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
     >

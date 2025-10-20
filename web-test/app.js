@@ -1,4 +1,4 @@
-// Configuración de la aplicación
+// Configuración de la aplicación POS con soporte RBAC
 const API_BASE_URL = 'http://localhost';
 const SERVICES = {
     user: { port: 8000, name: 'User Service' },
@@ -6,16 +6,26 @@ const SERVICES = {
     invoicing: { port: 8002, name: 'Invoicing Service' }
 };
 
+// Estado global de la aplicación
+let currentUser = null;
+let authToken = null;
+
 // Inicialización cuando se carga la página
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Iniciando dashboard del sistema POS...');
+    console.log('🚀 Iniciando dashboard del sistema POS con soporte RBAC...');
     checkAllServices();
     
     // Actualizar estado cada 30 segundos
     setInterval(checkAllServices, 30000);
+    
+    // Mostrar información del sistema
+    setTimeout(() => {
+        showSystemInfo();
+        simulateDataLoad();
+    }, 2000);
 });
 
-// Función para realizar peticiones HTTP
+// Función para realizar peticiones HTTP con soporte para autenticación
 async function makeRequest(url, options = {}) {
     const defaultOptions = {
         method: 'GET',
@@ -25,12 +35,22 @@ async function makeRequest(url, options = {}) {
         ...options
     };
 
+    // Agregar token de autenticación si existe
+    if (authToken) {
+        defaultOptions.headers['Authorization'] = `Bearer ${authToken}`;
+    }
+
     try {
         logToResponse(`🔄 Realizando petición a: ${url}`);
+        if (options.body) {
+            logToResponse(`📤 Datos enviados: ${JSON.stringify(JSON.parse(options.body), null, 2)}`);
+        }
+        
         const response = await fetch(url, defaultOptions);
         
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${response.statusText}\n${errorText}`);
         }
         
         const data = await response.json();
@@ -163,10 +183,30 @@ async function testInvoicingService() {
 async function testCustomEndpoint() {
     const select = document.getElementById('endpointSelect');
     const endpoint = select.value;
+    const selectedOption = select.options[select.selectedIndex];
+    const method = selectedOption.dataset.method || 'GET';
     const url = `${API_BASE_URL}:${endpoint}`;
     
-    logToResponse(`🎯 Probando endpoint personalizado: ${endpoint}`);
-    await makeSimpleRequest(url);
+    logToResponse(`🎯 Probando endpoint personalizado: ${method} ${endpoint}`);
+    
+    let options = { method };
+    
+    // Agregar datos de prueba para endpoints POST
+    if (method === 'POST') {
+        if (endpoint.includes('auth/login')) {
+            options.body = JSON.stringify({
+                username: 'admin',
+                password: 'admin123'
+            });
+        } else if (endpoint.includes('auth/simple-login')) {
+            options.body = JSON.stringify({
+                username: 'admin',
+                password: 'admin'
+            });
+        }
+    }
+    
+    await makeRequest(url, options);
 }
 
 // Función para probar todos los endpoints
@@ -289,34 +329,230 @@ async function testLogin() {
 
 // Función para mostrar información del sistema
 function showSystemInfo() {
-    logToResponse('ℹ️ Información del sistema:');
-    logToResponse(`- User Service: ${API_BASE_URL}:8000`);
-    logToResponse(`- POS Service: ${API_BASE_URL}:8001`);
-    logToResponse(`- Invoicing Service: ${API_BASE_URL}:8002`);
-    logToResponse(`- Arquitectura: Microservicios sin dependencias circulares`);
-    logToResponse(`- Comunicación: HTTP REST + RabbitMQ Events`);
-    logToResponse(`- Base de datos: PostgreSQL (3 instancias independientes)`);
+    logToResponse('ℹ️ === INFORMACIÓN DEL SISTEMA POS RBAC ===');
+    logToResponse(`🔗 User Service (RBAC): ${API_BASE_URL}:8000`);
+    logToResponse(`🛒 POS Service: ${API_BASE_URL}:8001`);
+    logToResponse(`📄 Invoicing Service: ${API_BASE_URL}:8002`);
+    logToResponse(`🏗️ Arquitectura: Microservicios con RBAC`);
+    logToResponse(`🔐 Autenticación: JWT con roles y permisos dinámicos`);
+    logToResponse(`🛡️ Autorización: Sistema RBAC escalable`);
+    logToResponse(`🔄 Comunicación: HTTP REST + RabbitMQ`);
+    logToResponse(`🗄️ Base de datos: PostgreSQL (3 instancias) + RBAC`);
+    logToResponse(`📊 Características RBAC:`);
+    logToResponse(`   - 4 roles por defecto (Admin, Manager, Cashier, Viewer)`);
+    logToResponse(`   - 24+ permisos granulares`);
+    logToResponse(`   - Permisos específicos por usuario`);
+    logToResponse(`   - Sistema de auditoría completo`);
 }
 
 // Función para simular carga de datos
 function simulateDataLoad() {
-    logToResponse('📊 Simulando carga de datos del sistema...');
+    logToResponse('📊 === SIMULANDO CARGA DE DATOS DEL SISTEMA RBAC ===');
     
     const systemStats = {
-        total_users: 45,
-        total_sales: 1250,
-        total_invoices: 890,
-        revenue_today: 15420.50,
+        // Sistema RBAC
+        rbac_system: 'active',
+        total_roles: 4,
+        total_permissions: 24,
+        users_with_rbac: 9,
+        
+        // Estadísticas generales
+        total_users: 9,
+        total_sales: 1847,
+        total_invoices: 1234,
+        revenue_today: 28647.50,
         active_branches: 3,
-        system_uptime: '2 días, 14 horas'
+        system_uptime: '5 días, 8 horas',
+        
+        // Nuevas estadísticas RBAC
+        rbac_features: {
+            'Role-based access': true,
+            'Permission system': true,
+            'User-specific permissions': true,
+            'Temporary permissions': true,
+            'Audit trail': true
+        }
     };
     
-    logToResponse('📈 Estadísticas del sistema:');
+    logToResponse('📈 Estadísticas del sistema RBAC:');
     logToResponse(JSON.stringify(systemStats, null, 2));
 }
 
-// Inicializar información del sistema al cargar
-setTimeout(() => {
-    showSystemInfo();
-    simulateDataLoad();
-}, 2000);
+// === NUEVAS FUNCIONES RBAC ===
+
+// Función para test de login RBAC completo
+async function testRBACLogin() {
+    logToResponse('🔐 === PROBANDO SISTEMA DE AUTENTICACIÓN RBAC ===');
+    
+    const users = [
+        { username: 'admin', password: 'admin123', role: 'Admin' },
+        { username: 'manager1', password: 'manager123', role: 'Manager' },
+        { username: 'cashier1', password: 'cashier123', role: 'Cashier' }
+    ];
+    
+    for (const user of users) {
+        logToResponse(`\n👤 Probando login para ${user.role}: ${user.username}`);
+        
+        const loginData = {
+            username: user.username,
+            password: user.password
+        };
+        
+        const result = await makeRequest(`${API_BASE_URL}:8000/api/v1/auth/login`, {
+            method: 'POST',
+            body: JSON.stringify(loginData)
+        });
+        
+        if (result.success) {
+            // Guardar token para próximas peticiones
+            if (user.username === 'admin') {
+                authToken = result.data.access_token;
+                currentUser = {
+                    username: user.username,
+                    role: user.role,
+                    token: authToken
+                };
+                updateUserSession(result.data);
+            }
+            
+            logToResponse(`✅ ${user.role} login exitoso - Permisos: ${result.data.permissions ? result.data.permissions.length : 'N/A'}`);
+        } else {
+            logToResponse(`❌ ${user.role} login fallido`);
+        }
+        
+        // Pausa entre requests
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    logToResponse('\n🎉 Prueba de login RBAC completada');
+}
+
+// Función para probar el endpoint /me
+async function testUserProfile() {
+    if (!authToken) {
+        logToResponse('⚠️ No hay token de autenticación. Ejecuta primero "Test RBAC Login"');
+        return;
+    }
+    
+    logToResponse('👤 === PROBANDO ENDPOINT /api/v1/auth/me ===');
+    
+    const result = await makeRequest(`${API_BASE_URL}:8000/api/v1/auth/me`);
+    
+    if (result.success) {
+        logToResponse('✅ Información del usuario actual obtenida exitosamente');
+        updateUserSession(null, result.data);
+    }
+}
+
+// Función para probar el sistema RBAC completo
+async function testRBACSystem() {
+    if (!authToken) {
+        logToResponse('⚠️ No hay token de autenticación. Ejecuta primero "Test RBAC Login"');
+        return;
+    }
+    
+    logToResponse('🛡️ === PROBANDO SISTEMA RBAC COMPLETO ===');
+    
+    // 1. Estado del sistema RBAC
+    logToResponse('\n📊 1. Verificando estado del sistema RBAC...');
+    await makeRequest(`${API_BASE_URL}:8000/api/v1/rbac/system/status`);
+    
+    // 2. Listar roles
+    logToResponse('\n👥 2. Obteniendo roles del sistema...');
+    await makeRequest(`${API_BASE_URL}:8000/api/v1/rbac/roles`);
+    
+    // 3. Listar permisos
+    logToResponse('\n🔑 3. Obteniendo permisos del sistema...');
+    await makeRequest(`${API_BASE_URL}:8000/api/v1/rbac/permissions`);
+    
+    // 4. Recursos de permisos
+    logToResponse('\n🏷️ 4. Obteniendo recursos de permisos...');
+    await makeRequest(`${API_BASE_URL}:8000/api/v1/rbac/permissions/resources`);
+    
+    logToResponse('\n🎉 Prueba completa del sistema RBAC finalizada');
+}
+
+// Función para probar roles y permisos específicos
+async function testRolePermissions() {
+    if (!authToken) {
+        logToResponse('⚠️ No hay token de autenticación. Ejecuta primero "Test RBAC Login"');
+        return;
+    }
+    
+    logToResponse('🎭 === PROBANDO ROLES Y PERMISOS ESPECÍFICOS ===');
+    
+    // Obtener roles y sus permisos
+    logToResponse('\n📋 Obteniendo roles del sistema...');
+    const rolesResult = await makeRequest(`${API_BASE_URL}:8000/api/v1/rbac/roles`);
+    
+    if (rolesResult.success && rolesResult.data.length > 0) {
+        for (const role of rolesResult.data) {
+            logToResponse(`\n🔍 Obteniendo permisos para rol: ${role.display_name} (${role.name})`);
+            await makeRequest(`${API_BASE_URL}:8000/api/v1/rbac/roles/${role.id}/permissions`);
+            
+            // Pausa entre requests
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+    }
+    
+    logToResponse('\n🎉 Prueba de roles y permisos completada');
+}
+
+// Función para actualizar la información de sesión del usuario
+function updateUserSession(loginData, userProfileData) {
+    const sessionSection = document.getElementById('userSessionSection');
+    const userInfoDiv = document.getElementById('userInfo');
+    
+    if (loginData || userProfileData) {
+        sessionSection.style.display = 'block';
+        
+        let userInfo = '';
+        
+        if (userProfileData) {
+            // Datos del endpoint /me
+            userInfo = `
+                <div class="col-md-3">
+                    <strong>👤 Usuario:</strong><br>
+                    <span class="text-primary">${userProfileData.username}</span>
+                </div>
+                <div class="col-md-3">
+                    <strong>📝 Nombre:</strong><br>
+                    ${userProfileData.full_name || 'N/A'}
+                </div>
+                <div class="col-md-3">
+                    <strong>🎭 Rol:</strong><br>
+                    <span class="badge bg-primary">${userProfileData.role_display_name || userProfileData.role}</span>
+                </div>
+                <div class="col-md-3">
+                    <strong>🏢 Sucursal:</strong><br>
+                    ${userProfileData.branch_id || 'Todas'}
+                </div>
+            `;
+        } else if (loginData) {
+            // Datos del login
+            const permissionCount = loginData.permissions ? loginData.permissions.length : 0;
+            userInfo = `
+                <div class="col-md-3">
+                    <strong>👤 Usuario:</strong><br>
+                    <span class="text-primary">${currentUser.username}</span>
+                </div>
+                <div class="col-md-3">
+                    <strong>🎭 Rol:</strong><br>
+                    <span class="badge bg-success">${currentUser.role}</span>
+                </div>
+                <div class="col-md-3">
+                    <strong>🔑 Permisos:</strong><br>
+                    ${permissionCount} permisos
+                </div>
+                <div class="col-md-3">
+                    <strong>⏰ Token:</strong><br>
+                    <span class="text-success">Activo</span>
+                </div>
+            `;
+        }
+        
+        userInfoDiv.innerHTML = userInfo;
+    } else {
+        sessionSection.style.display = 'none';
+    }
+}

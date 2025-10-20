@@ -59,12 +59,14 @@ class UserProfile(BaseModel):
     id: int
     username: str
     full_name: str
-    role: UserRole
+    role: str  # Changed from UserRole enum to string for RBAC compatibility
+    role_display_name: Optional[str] = None
     is_active: bool
     branch_id: Optional[int]
     
     class Config:
         from_attributes = True
+    
 
 # === AUTHENTICATION SCHEMAS ===
 
@@ -108,7 +110,7 @@ class PermissionCheck(BaseModel):
 
 class PermissionResponse(BaseModel):
     has_permission: bool
-    reason: Optional[str] = None
+    reason: Optional[str] = Nonecurrent_user
 
 class RolePermissions(BaseModel):
     role: UserRole

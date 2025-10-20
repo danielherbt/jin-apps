@@ -122,6 +122,22 @@
             </div>
         </div>
 
+        <!-- User Session Info -->
+        <div class="row mb-4" id="userSessionSection" style="display: none;">
+            <div class="col">
+                <div class="card border-success">
+                    <div class="card-header bg-success text-white">
+                        <h5><i class="fas fa-user-check me-2"></i>Usuario Logueado</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="userInfo">
+                            <!-- Se llenará dinámicamente -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- API Testing Section -->
         <div class="row">
             <div class="col-md-6">
@@ -133,11 +149,32 @@
                         <div class="mb-3">
                             <label class="form-label">Endpoint a probar:</label>
                             <select class="form-select" id="endpointSelect">
+                                <!-- User Service Health -->
                                 <option value="8000/health">User Service - Health Check</option>
+                                
+                                <!-- Authentication Endpoints -->
+                                <option value="8000/api/v1/auth/login" data-method="POST">Auth - Login (POST)</option>
+                                <option value="8000/api/v1/auth/me">Auth - Current User Info</option>
+                                <option value="8000/api/v1/auth/simple-login" data-method="POST">Auth - Simple Login (POST)</option>
+                                <option value="8000/api/v1/auth/health">Auth - Health Check</option>
+                                <option value="8000/api/v1/auth/system-info">Auth - System Info</option>
+                                
+                                <!-- RBAC Endpoints -->
+                                <option value="8000/api/v1/rbac/system/status">RBAC - System Status</option>
+                                <option value="8000/api/v1/rbac/roles">RBAC - List Roles</option>
+                                <option value="8000/api/v1/rbac/permissions">RBAC - List Permissions</option>
+                                <option value="8000/api/v1/rbac/permissions/resources">RBAC - Permission Resources</option>
+                                
+                                <!-- User Management -->
                                 <option value="8000/api/v1/users">User Service - Get Users</option>
+                                
+                                <!-- POS Service -->
                                 <option value="8001/health">POS Service - Health Check</option>
                                 <option value="8001/api/v1/sales">POS Service - Get Sales</option>
                                 <option value="8001/api/v1/inventory">POS Service - Inventory</option>
+                                <option value="8001/api/v1/branches">POS Service - Branches</option>
+                                
+                                <!-- Invoicing Service -->
                                 <option value="8002/health">Invoicing Service - Health Check</option>
                                 <option value="8002/api/v1/invoices">Invoicing Service - Get Invoices</option>
                                 <option value="8002/api/v1/invoices/sri-status">Invoicing Service - SRI Status</option>
@@ -160,14 +197,20 @@
                     </div>
                     <div class="card-body">
                         <div class="d-grid gap-2">
-                            <button class="btn btn-info" onclick="createTestSale()">
+                            <button class="btn btn-success" onclick="testRBACLogin()">
+                                <i class="fas fa-sign-in-alt"></i> Test RBAC Login
+                            </button>
+                            <button class="btn btn-primary" onclick="testUserProfile()">
+                                <i class="fas fa-user"></i> Test User Profile (/me)
+                            </button>
+                            <button class="btn btn-info" onclick="testRBACSystem()">
+                                <i class="fas fa-shield-alt"></i> Test RBAC System
+                            </button>
+                            <button class="btn btn-warning" onclick="testRolePermissions()">
+                                <i class="fas fa-users-cog"></i> Test Roles & Permissions
+                            </button>
+                            <button class="btn btn-dark" onclick="createTestSale()">
                                 <i class="fas fa-shopping-cart"></i> Crear Venta de Prueba
-                            </button>
-                            <button class="btn btn-warning" onclick="createTestInvoice()">
-                                <i class="fas fa-file-invoice"></i> Crear Factura de Prueba
-                            </button>
-                            <button class="btn btn-success" onclick="testLogin()">
-                                <i class="fas fa-sign-in-alt"></i> Probar Login
                             </button>
                             <button class="btn btn-secondary" onclick="checkAllServices()">
                                 <i class="fas fa-sync"></i> Verificar Todos los Servicios

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -32,15 +32,21 @@ function App() {
               {/* Public routes */}
               <Route path="/login" element={<Login />} />
               
+              {/* Root redirect */}
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              
               {/* Protected routes with Dashboard layout */}
               <Route
-                path="/*"
+                path="/dashboard/*"
                 element={
                   <ProtectedRoute>
                     <Dashboard />
                   </ProtectedRoute>
                 }
               />
+              
+              {/* Catch all other routes and redirect to dashboard */}
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </AuthProvider>
         </Router>

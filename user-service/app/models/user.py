@@ -48,7 +48,7 @@ class Permission(PyEnum):
     # Reports
     VIEW_REPORTS = "view_reports"
     EXPORT_REPORTS = "export_reports"
-    
+    current_user
     # System
     SYSTEM_CONFIG = "system_config"
     VIEW_LOGS = "view_logs"

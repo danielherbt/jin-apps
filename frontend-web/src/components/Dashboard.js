@@ -18,8 +18,7 @@ import {
   People,
   Security,
 } from '@mui/icons-material';
-/*import { useAuth } from '../contexts/AuthContext';*/
-import { usePOSPermissions, useInventoryPermissions, useReportsPermissions, useAdminPermissions } from '../hooks/usePermissions';
+import { useAuth } from '../contexts/AuthContext';
 import Header from './Header';
 import ProtectedRoute from './ProtectedRoute';
 import POS from './POS';
@@ -34,62 +33,60 @@ const drawerWidth = 240;
 const Dashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  /*const { user } = useAuth();*/
-  
-  // Get permission hooks
-  const posPermissions = usePOSPermissions();
-  const inventoryPermissions = useInventoryPermissions();
-  const salesPermissions = useReportsPermissions();
-  const adminPermissions = useAdminPermissions();
+  const { user, hasRole, hasAnyRole, permissions } = useAuth();
+
+  // Permission check function using backend permissions
+  const checkPermission = (permission) => {
+    if (!permissions || permissions.length === 0) {
+      // Fallback to role-based check if permissions not loaded
+      const rolePermissions = {
+        admin: ['create_user', 'read_user', 'update_user', 'delete_user', 'create_sale', 'read_sale', 'update_sale', 'delete_sale', 'create_product', 'read_product', 'update_product', 'delete_product', 'create_invoice', 'read_invoice', 'update_invoice', 'delete_invoice', 'create_branch', 'read_branch', 'update_branch', 'delete_branch', 'view_reports', 'export_reports', 'system_config', 'view_logs'],
+        manager: ['read_user', 'update_user', 'create_sale', 'read_sale', 'update_sale', 'create_product', 'read_product', 'update_product', 'create_invoice', 'read_invoice', 'update_invoice', 'read_branch', 'update_branch', 'view_reports', 'export_reports'],
+        cashier: ['create_sale', 'read_sale', 'read_product', 'create_invoice', 'read_invoice', 'read_branch'],
+        viewer: ['read_sale', 'read_product', 'read_invoice', 'read_branch']
+      };
+      const rolePerms = rolePermissions[user?.role] || [];
+      return rolePerms.includes(permission);
+    }
+    return permissions.includes(permission);
+  };
 
   const menuItems = [
-    { 
-      text: 'POS', 
-      icon: <PointOfSale />, 
-      path: '/pos', 
-      permissions: ['create_sale', 'read_sale'],
-      hasAccess: posPermissions.canCreateSale || posPermissions.canReadSale,
-      loading: posPermissions.loading
+    {
+      text: 'POS',
+      icon: <PointOfSale />,
+      path: '/pos',
+      hasAccess: user ? (checkPermission('create_sale') || checkPermission('read_sale')) : false
     },
-    { 
-      text: 'Inventory', 
-      icon: <Inventory />, 
-      path: '/inventory', 
-      permissions: ['read_product', 'create_product', 'update_product'],
-      hasAccess: inventoryPermissions.canReadProduct,
-      loading: inventoryPermissions.loading
+    {
+      text: 'Inventory',
+      icon: <Inventory />,
+      path: '/inventory',
+      hasAccess: user ? checkPermission('read_product') : false
     },
-    { 
-      text: 'Sales', 
-      icon: <Receipt />, 
-      path: '/sales', 
-      permissions: ['read_sale', 'view_reports'],
-      hasAccess: salesPermissions.canViewReports || posPermissions.canReadSale,
-      loading: salesPermissions.loading || posPermissions.loading
+    {
+      text: 'Sales',
+      icon: <Receipt />,
+      path: '/sales',
+      hasAccess: user ? (checkPermission('view_reports') || checkPermission('read_sale')) : false
     },
-    { 
-      text: 'Branches', 
-      icon: <Business />, 
-      path: '/branches', 
-      permissions: ['read_branch', 'create_branch', 'update_branch'],
-      hasAccess: adminPermissions.canManageBranches,
-      loading: adminPermissions.loading
+    {
+      text: 'Branches',
+      icon: <Business />,
+      path: '/branches',
+      hasAccess: user ? (checkPermission('create_branch') || checkPermission('read_branch')) : false
     },
-    { 
-      text: 'Users', 
-      icon: <People />, 
-      path: '/users', 
-      permissions: ['read_user', 'create_user', 'update_user'],
-      hasAccess: adminPermissions.canManageUsers,
-      loading: adminPermissions.loading
+    {
+      text: 'Users',
+      icon: <People />,
+      path: '/users',
+      hasAccess: user ? (checkPermission('create_user') || checkPermission('read_user')) : false
     },
-    { 
-      text: 'RBAC Demo', 
-      icon: <Security />, 
-      path: '/rbac-demo', 
-      permissions: [], // Always accessible for demo
-      hasAccess: true,
-      loading: false
+    {
+      text: 'RBAC Demo',
+      icon: <Security />,
+      path: '/rbac-demo',
+      hasAccess: true // Always accessible for demo
     },
   ];
 

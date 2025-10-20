@@ -88,6 +88,37 @@ export const useAuth = () => {
   return context;
 };
 
+// Local permission checking function for test tokens
+const checkPermissionLocally = (userRole, permission) => {
+  const rolePermissions = {
+    admin: [
+      // All permissions
+      'create_user', 'read_user', 'update_user', 'delete_user',
+      'create_sale', 'read_sale', 'update_sale', 'delete_sale',
+      'create_product', 'read_product', 'update_product', 'delete_product',
+      'create_invoice', 'read_invoice', 'update_invoice', 'delete_invoice',
+      'create_branch', 'read_branch', 'update_branch', 'delete_branch',
+      'view_reports', 'export_reports', 'system_config', 'view_logs'
+    ],
+    manager: [
+      'read_user', 'update_user', 'create_sale', 'read_sale', 'update_sale',
+      'create_product', 'read_product', 'update_product', 'create_invoice',
+      'read_invoice', 'update_invoice', 'read_branch', 'update_branch',
+      'view_reports', 'export_reports'
+    ],
+    cashier: [
+      'create_sale', 'read_sale', 'read_product', 'create_invoice', 
+      'read_invoice', 'read_branch'
+    ],
+    viewer: [
+      'read_sale', 'read_product', 'read_invoice', 'read_branch'
+    ]
+  };
+  
+  const permissions = rolePermissions[userRole] || [];
+  return permissions.includes(permission);
+};
+
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
@@ -102,26 +133,47 @@ export const AuthProvider = ({ children }) => {
 
   // Load user permissions from backend
   const loadPermissions = useCallback(async () => {
-    if (!state.isAuthenticated) return [];
+    if (!state.isAuthenticated || !state.user) return [];
 
     try {
-      const permissions = await authService.getUserPermissions();
+      // Get effective permissions from backend API
+      const effectivePermissions = await authService.getEffectivePermissions(state.user.id);
+      const permissions = effectivePermissions.effective_permissions || [];
       dispatch({ type: AUTH_ACTIONS.SET_PERMISSIONS, payload: permissions });
       return permissions;
     } catch (error) {
-      console.error('Failed to load permissions:', error);
+      console.warn('Failed to load permissions from API, using local fallback:', error);
+      // Fallback to local permissions based on role
+      if (state.user && state.user.role) {
+        const rolePermissions = {
+          admin: ['create_user', 'read_user', 'update_user', 'delete_user', 'create_sale', 'read_sale', 'update_sale', 'delete_sale', 'create_product', 'read_product', 'update_product', 'delete_product', 'create_invoice', 'read_invoice', 'update_invoice', 'delete_invoice', 'create_branch', 'read_branch', 'update_branch', 'delete_branch', 'view_reports', 'export_reports', 'system_config', 'view_logs'],
+          manager: ['read_user', 'update_user', 'create_sale', 'read_sale', 'update_sale', 'create_product', 'read_product', 'update_product', 'create_invoice', 'read_invoice', 'update_invoice', 'read_branch', 'update_branch', 'view_reports', 'export_reports'],
+          cashier: ['create_sale', 'read_sale', 'read_product', 'create_invoice', 'read_invoice', 'read_branch'],
+          viewer: ['read_sale', 'read_product', 'read_invoice', 'read_branch']
+        };
+        const permissions = rolePermissions[state.user.role] || [];
+        dispatch({ type: AUTH_ACTIONS.SET_PERMISSIONS, payload: permissions });
+        return permissions;
+      }
       return [];
     }
-  }, [state.isAuthenticated]);
+  }, [state.isAuthenticated, state.user]);
 
   // Load available roles from backend
   const loadRoles = useCallback(async () => {
     try {
-      const roles = await authService.getAvailableRoles();
-      dispatch({ type: AUTH_ACTIONS.SET_ROLES, payload: roles });
-      return roles;
+      // Use local roles first
+      const defaultRoles = [
+        { role: 'admin', display_name: 'Administrator', description: 'Full system access' },
+        { role: 'manager', display_name: 'Manager', description: 'Management operations' },
+        { role: 'cashier', display_name: 'Cashier', description: 'Point of sale operations' },
+        { role: 'viewer', display_name: 'Viewer', description: 'Read-only access' },
+      ];
+      
+      dispatch({ type: AUTH_ACTIONS.SET_ROLES, payload: defaultRoles });
+      return defaultRoles;
     } catch (error) {
-      console.error('Failed to load roles:', error);
+      console.warn('Failed to load roles:', error);
       return [];
     }
   }, []);
@@ -171,7 +223,15 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: AUTH_ACTIONS.LOGIN_START });
     try {
       const result = await authService.login(credentials);
-      dispatch({ type: AUTH_ACTIONS.LOGIN_SUCCESS, payload: { user: result.user } });
+      
+      // Ensure we have user data and delay state update slightly
+      if (result && result.user) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        dispatch({ type: AUTH_ACTIONS.LOGIN_SUCCESS, payload: { user: result.user } });
+      } else {
+        throw new Error('Invalid login response');
+      }
+      
       return result;
     } catch (error) {
       dispatch({ type: AUTH_ACTIONS.LOGIN_FAILURE, payload: error.message });
@@ -232,14 +292,25 @@ export const AuthProvider = ({ children }) => {
   // Check if user has specific permission
   const hasPermission = useCallback(async (permission) => {
     if (!state.isAuthenticated) return false;
-    
+
     // Check cache first
     if (state.permissionCache.has(permission)) {
       return state.permissionCache.get(permission);
     }
-    
+
     dispatch({ type: AUTH_ACTIONS.PERMISSION_CHECK_START });
     try {
+      // Use effective permissions from state if available
+      if (state.permissions && state.permissions.length > 0) {
+        const result = state.permissions.includes(permission);
+        dispatch({
+          type: AUTH_ACTIONS.SET_PERMISSION_CACHE,
+          payload: { key: permission, value: result }
+        });
+        return result;
+      }
+
+      // Fallback to API call
       const result = await authService.hasPermission(permission);
       dispatch({
         type: AUTH_ACTIONS.SET_PERMISSION_CACHE,
@@ -247,12 +318,21 @@ export const AuthProvider = ({ children }) => {
       });
       return result;
     } catch (error) {
-      console.error('Permission check failed:', error);
+      console.warn('Permission check API failed, using local fallback:', error);
+      // Fallback to local permission check
+      if (state.user && state.user.role) {
+        const result = checkPermissionLocally(state.user.role, permission);
+        dispatch({
+          type: AUTH_ACTIONS.SET_PERMISSION_CACHE,
+          payload: { key: permission, value: result }
+        });
+        return result;
+      }
       return false;
     } finally {
       dispatch({ type: AUTH_ACTIONS.PERMISSION_CHECK_END });
     }
-  }, [state.isAuthenticated, state.permissionCache]);
+  }, [state.isAuthenticated, state.permissionCache, state.user, state.permissions]);
 
   // Check if user has any of the provided permissions
   const hasAnyPermission = useCallback(async (permissions) => {
@@ -280,6 +360,18 @@ export const AuthProvider = ({ children }) => {
   const clearPermissionCache = useCallback(() => {
     dispatch({ type: AUTH_ACTIONS.SET_PERMISSION_CACHE, payload: { key: null, value: null } });
   }, []);
+
+  // Refresh permissions from backend
+  const refreshPermissions = useCallback(async () => {
+    if (state.isAuthenticated && state.user) {
+      try {
+        await loadPermissions();
+        clearPermissionCache();
+      } catch (error) {
+        console.error('Failed to refresh permissions:', error);
+      }
+    }
+  }, [state.isAuthenticated, state.user, loadPermissions, clearPermissionCache]);
 
   // Create user (admin only)
   const createUser = useCallback(async (userData) => {
@@ -349,6 +441,7 @@ export const AuthProvider = ({ children }) => {
     loadPermissions,
     loadRoles,
     clearPermissionCache,
+    refreshPermissions,
 
     // User Management (RBAC)
     createUser,

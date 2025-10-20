@@ -2,6 +2,19 @@
 @base_url_user = http://localhost:8000
 
 ### Auth Login
+POST {{base_url_user}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+### Get current user
+GET {{base_url_user}}/api/v1/auth/me
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwidXNlcm5hbWUiOiJhZG1pbiIsImVtYWlsIjoiYWRtaW5AcG9zc3lzdGVtLmNvbSIsImZ1bGxfbmFtZSI6IlN5c3RlbSBBZG1pbmlzdHJhdG9yIiwicm9sZSI6ImFkbWluIiwicGVybWlzc2lvbnMiOlsiY3JlYXRlX3VzZXIiLCJyZWFkX3NhbGUiLCJkZWxldGVfcHJvZHVjdCIsInJlYWRfaW52b2ljZSIsImNyZWF0ZV9pbnZvaWNlIiwidXBkYXRlX3Byb2R1Y3QiLCJjcmVhdGVfcHJvZHVjdCIsInN5c3RlbV9jb25maWciLCJ1cGRhdGVfYnJhbmNoIiwicmVhZF91c2VyIiwidmlld19yZXBvcnRzIiwicmVhZF9icmFuY2giLCJ2aWV3X2xvZ3MiLCJkZWxldGVfYnJhbmNoIiwiZGVsZXRlX3NhbGUiLCJ1cGRhdGVfc2FsZSIsImNyZWF0ZV9zYWxlIiwiZXhwb3J0X3JlcG9ydHMiLCJ1cGRhdGVfaW52b2ljZSIsImRlbGV0ZV91c2VyIiwiZGVsZXRlX2ludm9pY2UiLCJ1cGRhdGVfdXNlciIsInJlYWRfcHJvZHVjdCIsImNyZWF0ZV9icmFuY2giXSwiYnJhbmNoX2lkIjpudWxsLCJpc19zdXBlcnVzZXIiOnRydWUsImlzX2FjdGl2ZSI6dHJ1ZSwiaWF0IjoxNzYwNTAzODQzLjExNDMzMSwiZXhwIjoxNzYwNTA1NjQzLjA0ODc1OCwianRpIjoiYzk3ZGYxNzAtYTE2NS00NmQ1LTlmYmEtMjM2YTVhNTg2OWNiIiwidHlwZSI6ImFjY2VzcyJ9.XxC6q9CMrwUkb898PjEeJ3NpLZRKrc3JV-ukA8B-_m4
+
 POST {{base_url_user}}/api/v1/auth/token
 Content-Type: application/x-www-form-urlencoded
 
@@ -68,3 +81,7 @@ Authorization: Bearer TOKEN
   "customer_name": "Test Customer",
   "discount_amount": 0
 }
+
+### rbac
+### get roles
+GET {{base_url_user}}/api/v1/rbac/roles

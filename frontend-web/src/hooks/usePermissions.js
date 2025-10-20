@@ -7,30 +7,49 @@ import { useAuth } from '../contexts/AuthContext';
  * @returns {Object} { hasPermission: boolean, loading: boolean }
  */
 export const usePermission = (permission) => {
-  const { hasPermission, isAuthenticated } = useAuth();
+  const { hasPermission, isAuthenticated, user, permissionCache, permissions } = useAuth();
   const [state, setState] = useState({
     hasPermission: false,
     loading: true,
   });
 
   useEffect(() => {
-    if (!isAuthenticated || !permission) {
+    if (!isAuthenticated || !permission || !user) {
       setState({ hasPermission: false, loading: false });
       return;
     }
 
     let isMounted = true;
-    
+
     const checkPermission = async () => {
       try {
+        // Check effective permissions from backend first
+        if (permissions && permissions.length > 0) {
+          const result = permissions.includes(permission);
+          if (isMounted) {
+            setState({ hasPermission: result, loading: false });
+          }
+          return;
+        }
+
+        // Check cache first
+        if (permissionCache && permissionCache.has(permission)) {
+          if (isMounted) {
+            setState({ hasPermission: permissionCache.get(permission), loading: false });
+          }
+          return;
+        }
+
         const result = await hasPermission(permission);
         if (isMounted) {
           setState({ hasPermission: result, loading: false });
         }
       } catch (error) {
-        console.error('Permission check failed:', error);
+        console.warn('Permission check failed, using fallback:', error);
         if (isMounted) {
-          setState({ hasPermission: false, loading: false });
+          // Fallback to local check
+          const localResult = checkLocalPermission(user.role, permission);
+          setState({ hasPermission: localResult, loading: false });
         }
       }
     };
@@ -40,9 +59,39 @@ export const usePermission = (permission) => {
     return () => {
       isMounted = false;
     };
-  }, [permission, hasPermission, isAuthenticated]);
+  }, [permission, hasPermission, isAuthenticated, user, permissionCache, permissions]);
 
   return state;
+};
+
+// Local fallback function
+const checkLocalPermission = (role, permission) => {
+  const rolePermissions = {
+    admin: [
+      'create_user', 'read_user', 'update_user', 'delete_user',
+      'create_sale', 'read_sale', 'update_sale', 'delete_sale',
+      'create_product', 'read_product', 'update_product', 'delete_product',
+      'create_invoice', 'read_invoice', 'update_invoice', 'delete_invoice',
+      'create_branch', 'read_branch', 'update_branch', 'delete_branch',
+      'view_reports', 'export_reports', 'system_config', 'view_logs'
+    ],
+    manager: [
+      'read_user', 'update_user', 'create_sale', 'read_sale', 'update_sale',
+      'create_product', 'read_product', 'update_product', 'create_invoice',
+      'read_invoice', 'update_invoice', 'read_branch', 'update_branch',
+      'view_reports', 'export_reports'
+    ],
+    cashier: [
+      'create_sale', 'read_sale', 'read_product', 'create_invoice', 
+      'read_invoice', 'read_branch'
+    ],
+    viewer: [
+      'read_sale', 'read_product', 'read_invoice', 'read_branch'
+    ]
+  };
+  
+  const permissions = rolePermissions[role] || [];
+  return permissions.includes(permission);
 };
 
 /**
@@ -52,40 +101,47 @@ export const usePermission = (permission) => {
  * @returns {Object} { hasPermission: boolean, loading: boolean }
  */
 export const usePermissions = (permissions, mode = 'any') => {
-  const { hasPermission, hasAnyPermission, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, permissions: userPermissions } = useAuth();
   const [state, setState] = useState({
     hasPermission: false,
     loading: true,
   });
 
   useEffect(() => {
-    if (!isAuthenticated || !permissions || permissions.length === 0) {
+    if (!isAuthenticated || !permissions || permissions.length === 0 || !user) {
       setState({ hasPermission: false, loading: false });
       return;
     }
 
     let isMounted = true;
-    
-    const checkPermissions = async () => {
+
+    const checkPermissions = () => {
       try {
         let result = false;
 
-        if (mode === 'all') {
-          // Verificar que tenga TODOS los permisos
-          const checks = await Promise.all(
-            permissions.map(perm => hasPermission(perm))
-          );
-          result = checks.every(check => check === true);
+        // Use effective permissions from backend if available
+        if (userPermissions && userPermissions.length > 0) {
+          if (mode === 'all') {
+            // Verificar que tenga TODOS los permisos
+            result = permissions.every(perm => userPermissions.includes(perm));
+          } else {
+            // Verificar que tenga AL MENOS UNO de los permisos
+            result = permissions.some(perm => userPermissions.includes(perm));
+          }
         } else {
-          // Verificar que tenga AL MENOS UNO de los permisos
-          result = await hasAnyPermission(permissions);
+          // Fallback to local check
+          if (mode === 'all') {
+            result = permissions.every(perm => checkLocalPermission(user.role, perm));
+          } else {
+            result = permissions.some(perm => checkLocalPermission(user.role, perm));
+          }
         }
 
         if (isMounted) {
           setState({ hasPermission: result, loading: false });
         }
       } catch (error) {
-        console.error('Multiple permissions check failed:', error);
+        console.warn('Multiple permissions check failed:', error);
         if (isMounted) {
           setState({ hasPermission: false, loading: false });
         }
@@ -97,7 +153,7 @@ export const usePermissions = (permissions, mode = 'any') => {
     return () => {
       isMounted = false;
     };
-  }, [permissions, mode, hasPermission, hasAnyPermission, isAuthenticated]);
+  }, [permissions, mode, user, isAuthenticated, userPermissions]);
 
   return state;
 };
@@ -138,17 +194,46 @@ export const useRole = (roles) => {
  * @returns {Object} Conjunto de permisos administrativos comunes
  */
 export const useAdminPermissions = () => {
-  const userManagement = usePermissions(['create_user', 'read_user', 'update_user', 'delete_user'], 'any');
-  const systemConfig = usePermission('system_config');
-  const viewLogs = usePermission('view_logs');
-  const branchManagement = usePermissions(['create_branch', 'update_branch', 'delete_branch'], 'any');
-  
+  const { user, isAuthenticated, permissions } = useAuth();
+
+  if (!isAuthenticated || !user) {
+    return {
+      canManageUsers: false,
+      canConfigureSystem: false,
+      canViewLogs: false,
+      canManageBranches: false,
+      loading: false,
+    };
+  }
+
+  // Use backend permissions if available
+  if (permissions && permissions.length > 0) {
+    const canManageUsers = permissions.includes('create_user') || permissions.includes('read_user');
+    const canConfigureSystem = permissions.includes('system_config');
+    const canViewLogs = permissions.includes('view_logs');
+    const canManageBranches = permissions.includes('create_branch') || permissions.includes('update_branch');
+
+    return {
+      canManageUsers,
+      canConfigureSystem,
+      canViewLogs,
+      canManageBranches,
+      loading: false,
+    };
+  }
+
+  // Fallback to local check
+  const canManageUsers = checkLocalPermission(user.role, 'create_user') || checkLocalPermission(user.role, 'read_user');
+  const canConfigureSystem = checkLocalPermission(user.role, 'system_config');
+  const canViewLogs = checkLocalPermission(user.role, 'view_logs');
+  const canManageBranches = checkLocalPermission(user.role, 'create_branch') || checkLocalPermission(user.role, 'update_branch');
+
   return {
-    canManageUsers: userManagement.hasPermission,
-    canConfigureSystem: systemConfig.hasPermission,
-    canViewLogs: viewLogs.hasPermission,
-    canManageBranches: branchManagement.hasPermission,
-    loading: userManagement.loading || systemConfig.loading || viewLogs.loading || branchManagement.loading,
+    canManageUsers,
+    canConfigureSystem,
+    canViewLogs,
+    canManageBranches,
+    loading: false,
   };
 };
 
@@ -157,20 +242,39 @@ export const useAdminPermissions = () => {
  * @returns {Object} Conjunto de permisos para operaciones de POS
  */
 export const usePOSPermissions = () => {
-  const canCreateSale = usePermission('create_sale');
-  const canReadSale = usePermission('read_sale');
-  const canUpdateSale = usePermission('update_sale');
-  const canReadProduct = usePermission('read_product');
-  const canCreateInvoice = usePermission('create_invoice');
-  
+  const { user, isAuthenticated, permissions } = useAuth();
+
+  if (!isAuthenticated || !user) {
+    return {
+      canCreateSale: false,
+      canReadSale: false,
+      canUpdateSale: false,
+      canReadProduct: false,
+      canCreateInvoice: false,
+      loading: false,
+    };
+  }
+
+  // Use backend permissions if available
+  if (permissions && permissions.length > 0) {
+    return {
+      canCreateSale: permissions.includes('create_sale'),
+      canReadSale: permissions.includes('read_sale'),
+      canUpdateSale: permissions.includes('update_sale'),
+      canReadProduct: permissions.includes('read_product'),
+      canCreateInvoice: permissions.includes('create_invoice'),
+      loading: false,
+    };
+  }
+
+  // Fallback to local check
   return {
-    canCreateSale: canCreateSale.hasPermission,
-    canReadSale: canReadSale.hasPermission,
-    canUpdateSale: canUpdateSale.hasPermission,
-    canReadProduct: canReadProduct.hasPermission,
-    canCreateInvoice: canCreateInvoice.hasPermission,
-    loading: canCreateSale.loading || canReadSale.loading || canUpdateSale.loading || 
-             canReadProduct.loading || canCreateInvoice.loading,
+    canCreateSale: checkLocalPermission(user.role, 'create_sale'),
+    canReadSale: checkLocalPermission(user.role, 'read_sale'),
+    canUpdateSale: checkLocalPermission(user.role, 'update_sale'),
+    canReadProduct: checkLocalPermission(user.role, 'read_product'),
+    canCreateInvoice: checkLocalPermission(user.role, 'create_invoice'),
+    loading: false,
   };
 };
 
@@ -179,18 +283,49 @@ export const usePOSPermissions = () => {
  * @returns {Object} Conjunto de permisos para gestión de inventario
  */
 export const useInventoryPermissions = () => {
-  const canCreateProduct = usePermission('create_product');
-  const canReadProduct = usePermission('read_product');
-  const canUpdateProduct = usePermission('update_product');
-  const canDeleteProduct = usePermission('delete_product');
-  
+  const { user, isAuthenticated, permissions } = useAuth();
+
+  if (!isAuthenticated || !user) {
+    return {
+      canCreateProduct: false,
+      canReadProduct: false,
+      canUpdateProduct: false,
+      canDeleteProduct: false,
+      canManageProducts: false,
+      loading: false,
+    };
+  }
+
+  // Use backend permissions if available
+  if (permissions && permissions.length > 0) {
+    const canCreate = permissions.includes('create_product');
+    const canRead = permissions.includes('read_product');
+    const canUpdate = permissions.includes('update_product');
+    const canDelete = permissions.includes('delete_product');
+
+    return {
+      canCreateProduct: canCreate,
+      canReadProduct: canRead,
+      canUpdateProduct: canUpdate,
+      canDeleteProduct: canDelete,
+      canManageProducts: canCreate || canUpdate || canDelete,
+      loading: false,
+    };
+  }
+
+  // Fallback to local check
+  const canCreate = checkLocalPermission(user.role, 'create_product');
+  const canRead = checkLocalPermission(user.role, 'read_product');
+  const canUpdate = checkLocalPermission(user.role, 'update_product');
+  const canDelete = checkLocalPermission(user.role, 'delete_product');
+
   return {
-    canCreateProduct: canCreateProduct.hasPermission,
-    canReadProduct: canReadProduct.hasPermission,
-    canUpdateProduct: canUpdateProduct.hasPermission,
-    canDeleteProduct: canDeleteProduct.hasPermission,
-    canManageProducts: canCreateProduct.hasPermission || canUpdateProduct.hasPermission || canDeleteProduct.hasPermission,
-    loading: canCreateProduct.loading || canReadProduct.loading || canUpdateProduct.loading || canDeleteProduct.loading,
+    canCreateProduct: canCreate,
+    canReadProduct: canRead,
+    canUpdateProduct: canUpdate,
+    canDeleteProduct: canDelete,
+    canManageProducts: canCreate || canUpdate || canDelete,
+    loading: false,
   };
 };
 
@@ -199,13 +334,30 @@ export const useInventoryPermissions = () => {
  * @returns {Object} Conjunto de permisos para reportes y exportaciones
  */
 export const useReportsPermissions = () => {
-  const canViewReports = usePermission('view_reports');
-  const canExportReports = usePermission('export_reports');
-  
+  const { user, isAuthenticated, permissions } = useAuth();
+
+  if (!isAuthenticated || !user) {
+    return {
+      canViewReports: false,
+      canExportReports: false,
+      loading: false,
+    };
+  }
+
+  // Use backend permissions if available
+  if (permissions && permissions.length > 0) {
+    return {
+      canViewReports: permissions.includes('view_reports'),
+      canExportReports: permissions.includes('export_reports'),
+      loading: false,
+    };
+  }
+
+  // Fallback to local check
   return {
-    canViewReports: canViewReports.hasPermission,
-    canExportReports: canExportReports.hasPermission,
-    loading: canViewReports.loading || canExportReports.loading,
+    canViewReports: checkLocalPermission(user.role, 'view_reports'),
+    canExportReports: checkLocalPermission(user.role, 'export_reports'),
+    loading: false,
   };
 };
 

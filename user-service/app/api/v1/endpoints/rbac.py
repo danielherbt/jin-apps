@@ -186,7 +186,7 @@ async def get_permission_resources(
     
     resources = db.query(Permission.resource).distinct().all()
     return {"resources": [r[0] for r in resources]}
-
+/users/{user_id}/effective-permissions
 # === USER PERMISSION MANAGEMENT ===
 
 @router.post("/users/{user_id}/permissions", response_model=APIResponse)
@@ -263,7 +263,7 @@ async def get_user_specific_permissions(
     user_id: int,
     current_user: TokenData = Depends(get_current_user_token),
     db: Session = Depends(get_db)
-):
+): 
     """Obtener permisos específicos otorgados a un usuario"""
     
     # Los usuarios pueden ver sus propios permisos, admin puede ver todos

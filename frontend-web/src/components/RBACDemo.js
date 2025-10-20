@@ -43,13 +43,58 @@ const RBACDemo = () => {
   const { user, isAuthenticated } = useAuth();
   const [selectedPermission, setSelectedPermission] = useState('create_user');
   
-  // Get permission hooks for demo
-  const singlePermission = usePermission(selectedPermission);
-  const multiplePermissions = usePermissions(['create_user', 'delete_user'], 'any');
-  const adminPermissions = useAdminPermissions();
-  const posPermissions = usePOSPermissions();
-  const inventoryPermissions = useInventoryPermissions();
-  const reportsPermissions = useReportsPermissions();
+  // Simple local permission checking
+  const checkLocalPermission = (role, permission) => {
+    const rolePermissions = {
+      admin: ['create_user', 'read_user', 'update_user', 'delete_user', 'create_sale', 'read_sale', 'update_sale', 'delete_sale', 'create_product', 'read_product', 'update_product', 'delete_product', 'create_invoice', 'read_invoice', 'update_invoice', 'delete_invoice', 'create_branch', 'read_branch', 'update_branch', 'delete_branch', 'view_reports', 'export_reports', 'system_config', 'view_logs'],
+      manager: ['read_user', 'update_user', 'create_sale', 'read_sale', 'update_sale', 'create_product', 'read_product', 'update_product', 'create_invoice', 'read_invoice', 'update_invoice', 'read_branch', 'update_branch', 'view_reports', 'export_reports'],
+      cashier: ['create_sale', 'read_sale', 'read_product', 'create_invoice', 'read_invoice', 'read_branch'],
+      viewer: ['read_sale', 'read_product', 'read_invoice', 'read_branch']
+    };
+    const permissions = rolePermissions[role] || [];
+    return permissions.includes(permission);
+  };
+  
+  // Get demo permissions directly
+  const singlePermission = {
+    hasPermission: user ? checkLocalPermission(user.role, selectedPermission) : false,
+    loading: false
+  };
+  
+  const multiplePermissions = {
+    hasPermission: user ? (checkLocalPermission(user.role, 'create_user') || checkLocalPermission(user.role, 'delete_user')) : false,
+    loading: false
+  };
+  
+  const adminPermissions = {
+    canManageUsers: user ? checkLocalPermission(user.role, 'create_user') : false,
+    canConfigureSystem: user ? checkLocalPermission(user.role, 'system_config') : false,
+    canViewLogs: user ? checkLocalPermission(user.role, 'view_logs') : false,
+    canManageBranches: user ? checkLocalPermission(user.role, 'create_branch') : false,
+    loading: false
+  };
+  
+  const posPermissions = {
+    canCreateSale: user ? checkLocalPermission(user.role, 'create_sale') : false,
+    canReadSale: user ? checkLocalPermission(user.role, 'read_sale') : false,
+    canUpdateSale: user ? checkLocalPermission(user.role, 'update_sale') : false,
+    canCreateInvoice: user ? checkLocalPermission(user.role, 'create_invoice') : false,
+    loading: false
+  };
+  
+  const inventoryPermissions = {
+    canCreateProduct: user ? checkLocalPermission(user.role, 'create_product') : false,
+    canReadProduct: user ? checkLocalPermission(user.role, 'read_product') : false,
+    canUpdateProduct: user ? checkLocalPermission(user.role, 'update_product') : false,
+    canDeleteProduct: user ? checkLocalPermission(user.role, 'delete_product') : false,
+    loading: false
+  };
+  
+  const reportsPermissions = {
+    canViewReports: user ? checkLocalPermission(user.role, 'view_reports') : false,
+    canExportReports: user ? checkLocalPermission(user.role, 'export_reports') : false,
+    loading: false
+  };
 
   // Available permissions for testing
   const availablePermissions = [

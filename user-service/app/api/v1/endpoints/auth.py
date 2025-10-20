@@ -94,7 +94,16 @@ async def get_current_user(
             detail="User not found"
         )
     
-    return UserProfile.from_orm(user)
+    # Crear UserProfile compatible con RBAC manualmente
+    return UserProfile(
+        id=user.id,
+        username=user.username,
+        full_name=user.full_name,
+        role=user.role.name if user.role else "no_role",
+        role_display_name=user.role.display_name if user.role else None,
+        is_active=user.is_active,
+        branch_id=user.branch_id
+    )
 
 @router.post("/check-permission", response_model=PermissionResponse)
 async def check_permission(

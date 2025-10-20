@@ -2,26 +2,49 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Box, CircularProgress, Typography, Alert } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
-import { usePermissions, useRole } from '../hooks/usePermissions';
 
-const ProtectedRoute = ({ 
-  children, 
+const ProtectedRoute = ({
+  children,
   roles = [],           // Legacy role-based access (for compatibility)
   permissions = [],     // RBAC permission-based access
   requireAll = false,   // If true, requires ALL permissions; if false, requires ANY
   fallbackPath = '/login'
 }) => {
-  const { isAuthenticated, loading, user } = useAuth();
+  const { isAuthenticated, loading, user, hasPermission } = useAuth();
   const location = useLocation();
-  
-  // Legacy role check (for backward compatibility)
-  const roleCheck = useRole(roles);
-  
-  // RBAC permission check
-  const permissionCheck = usePermissions(permissions, requireAll ? 'all' : 'any');
 
-  // Show loading spinner while checking authentication or permissions
-  if (loading || permissionCheck.loading) {
+  // Local permission check function for fallback
+  const checkLocalPermission = (userRole, permission) => {
+    const rolePermissions = {
+      admin: [
+        'create_user', 'read_user', 'update_user', 'delete_user',
+        'create_sale', 'read_sale', 'update_sale', 'delete_sale',
+        'create_product', 'read_product', 'update_product', 'delete_product',
+        'create_invoice', 'read_invoice', 'update_invoice', 'delete_invoice',
+        'create_branch', 'read_branch', 'update_branch', 'delete_branch',
+        'view_reports', 'export_reports', 'system_config', 'view_logs'
+      ],
+      manager: [
+        'read_user', 'update_user', 'create_sale', 'read_sale', 'update_sale',
+        'create_product', 'read_product', 'update_product', 'create_invoice',
+        'read_invoice', 'update_invoice', 'read_branch', 'update_branch',
+        'view_reports', 'export_reports'
+      ],
+      cashier: [
+        'create_sale', 'read_sale', 'read_product', 'create_invoice',
+        'read_invoice', 'read_branch'
+      ],
+      viewer: [
+        'read_sale', 'read_product', 'read_invoice', 'read_branch'
+      ]
+    };
+
+    const perms = rolePermissions[userRole] || [];
+    return perms.includes(permission);
+  };
+
+  // Show loading spinner while checking authentication
+  if (loading) {
     return (
       <Box
         display="flex"
@@ -33,7 +56,7 @@ const ProtectedRoute = ({
       >
         <CircularProgress size={50} />
         <Typography variant="body1">
-          {loading ? 'Checking authentication...' : 'Verifying permissions...'}
+          Checking authentication...
         </Typography>
       </Box>
     );
@@ -41,16 +64,40 @@ const ProtectedRoute = ({
 
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
-    return <Navigate to={fallbackPath} state={{ from: location }} replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Determine access based on permissions or roles
+  // If no user, redirect to login
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Check access based on permissions or roles
   let hasAccess = true;
   let accessError = null;
 
   // Check permissions first (RBAC takes precedence)
   if (permissions.length > 0) {
-    hasAccess = permissionCheck.hasPermission;
+    // Use async permission checking
+    const checkPermissions = async () => {
+      if (requireAll) {
+        // User must have ALL permissions
+        const results = await Promise.all(permissions.map(perm => hasPermission(perm)));
+        return results.every(result => result === true);
+      } else {
+        // User must have at least ONE permission
+        const results = await Promise.all(permissions.map(perm => hasPermission(perm)));
+        return results.some(result => result === true);
+      }
+    };
+
+    // For now, use synchronous check with local fallback
+    if (requireAll) {
+      hasAccess = permissions.every(perm => checkLocalPermission(user.role, perm));
+    } else {
+      hasAccess = permissions.some(perm => checkLocalPermission(user.role, perm));
+    }
+
     if (!hasAccess) {
       accessError = {
         type: 'permission',
@@ -61,14 +108,18 @@ const ProtectedRoute = ({
   }
   // Fallback to role-based check (legacy compatibility)
   else if (roles.length > 0) {
-    hasAccess = roleCheck.hasRole;
+    hasAccess = roles.includes(user.role);
     if (!hasAccess) {
       accessError = {
         type: 'role',
         required: roles,
-        current: user?.role
+        current: user.role
       };
     }
+  }
+  // If no permissions or roles specified, allow access (for components like Dashboard)
+  else {
+    hasAccess = true;
   }
 
   // Show access denied message
@@ -100,6 +151,9 @@ const ProtectedRoute = ({
                 {accessError.required.map(perm => (
                   <li key={perm}>{perm}</li>
                 ))}
+              </Typography>
+              <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                Your role: {user.role}
               </Typography>
             </>
           ) : (

@@ -30,17 +30,28 @@ const Login = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      const from = location.state?.from?.pathname || '/';
-      navigate(from, { replace: true });
+      // For already authenticated users on mount, redirect immediately
+      const from = location.state?.from?.pathname || '/dashboard';
+      const isValidPath = from.startsWith('/') && !from.includes('//');
+      const redirectPath = isValidPath ? from : '/dashboard';
+      
+      window.location.replace(redirectPath);
     }
-  }, [isAuthenticated, navigate, location]);
+  }, [isAuthenticated, location]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
       clearError();
       await login({ username, password });
-      // Navigation will be handled by useEffect when isAuthenticated changes
+      
+      // Navigate directly after successful login
+      const from = location.state?.from?.pathname || '/dashboard';
+      const isValidPath = from.startsWith('/') && !from.includes('//');
+      const redirectPath = isValidPath ? from : '/dashboard';
+      
+      // Use window.location for more reliable navigation
+      window.location.href = redirectPath;
     } catch (error) {
       // Error is handled in the context
       console.error('Login failed:', error);
@@ -73,14 +84,45 @@ const Login = () => {
 
   return (
     <>
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', p: 2 }}>
-        <Container maxWidth="sm">
-          <Card sx={{ border: '1px solid #310727ff', borderRadius: 2 }}>
-            <CardContent sx={{ p: 4 }}>
-            <Typography variant="h4" align="center" gutterBottom>
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          minHeight: '100vh', 
+          p: 2,
+          backgroundColor: '#f5f5f5'
+        }}
+      >
+        <Card 
+          sx={{ 
+            maxWidth: 350,
+            width: '100%',
+            border: '1px solid #310727ff', 
+            borderRadius: 2,
+            boxShadow: 3,
+            backgroundColor: 'white'
+          }}
+        >
+          <CardContent sx={{ p: 4 }}>
+            <Typography 
+              variant="h4" 
+              align="center" 
+              gutterBottom
+              sx={{ 
+                fontWeight: 'bold',
+                color: '#310727ff',
+                mb: 1
+              }}
+            >
               🏪 POS System
             </Typography>
-            <Typography variant="body2" align="center" color="textSecondary" sx={{ mb: 2 }}>
+            <Typography 
+              variant="body2" 
+              align="center" 
+              color="textSecondary" 
+              sx={{ mb: 3 }}
+            >
               Sign in to access your dashboard
             </Typography>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -117,7 +159,16 @@ const Login = () => {
                 type="submit"
                 fullWidth
                 variant="contained"
-                sx={{ mt: 3, mb: 2 }}
+                sx={{ 
+                  mt: 3, 
+                  mb: 2,
+                  backgroundColor: '#310727ff',
+                  '&:hover': {
+                    backgroundColor: '#4a0a3a'
+                  },
+                  py: 1.5,
+                  fontSize: '1rem'
+                }}
                 disabled={loading}
               >
                 {loading ? 'Logging in...' : 'Login'}
@@ -172,7 +223,16 @@ const Login = () => {
                 type="submit"
                 fullWidth
                 variant="contained"
-                sx={{ mt: 3, mb: 2 }}
+                sx={{ 
+                  mt: 3, 
+                  mb: 2,
+                  backgroundColor: '#310727ff',
+                  '&:hover': {
+                    backgroundColor: '#4a0a3a'
+                  },
+                  py: 1.5,
+                  fontSize: '1rem'
+                }}
                 disabled={loading || password !== confirmPassword}
               >
                 {loading ? 'Registering...' : 'Register'}
@@ -181,7 +241,6 @@ const Login = () => {
           )}
             </CardContent>
           </Card>
-        </Container>
       </Box>
     
     {/* Success notification */}

@@ -110,7 +110,7 @@ class PermissionCheck(BaseModel):
 
 class PermissionResponse(BaseModel):
     has_permission: bool
-    reason: Optional[str] = Nonecurrent_user
+    reason: Optional[str] = None
 
 class RolePermissions(BaseModel):
     role: UserRole

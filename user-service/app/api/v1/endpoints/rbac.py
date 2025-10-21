@@ -186,7 +186,7 @@ async def get_permission_resources(
     
     resources = db.query(Permission.resource).distinct().all()
     return {"resources": [r[0] for r in resources]}
-/users/{user_id}/effective-permissions
+
 # === USER PERMISSION MANAGEMENT ===
 
 @router.post("/users/{user_id}/permissions", response_model=APIResponse)

@@ -45,7 +45,7 @@ async def login(
     # Actualizar último login
     user.last_login = datetime.utcnow()
     db.commit()
-    
+    Token
     # Crear tokens JWT
     token_data = create_access_token(user)
     

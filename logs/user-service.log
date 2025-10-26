@@ -1,2 +1,11 @@
 INFO:     Will watch for changes in these directories: ['/home/daniel/Documents/user-service']
-ERROR:    [Errno 98] Address already in use
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [4954] using WatchFiles
+INFO:     Started server process [4957]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+✅ Auth router imported successfully
+✅ RBAC router imported successfully
+✅ Auth router included in FastAPI app
+✅ RBAC router included in FastAPI app
+INFO:     127.0.0.1:37572 - "GET /health HTTP/1.1" 200 OK

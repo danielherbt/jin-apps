@@ -5,16 +5,15 @@ from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 from app.core.security import (
     verify_password, get_password_hash, create_access_token,
-    get_current_user_token, refresh_access_token, check_user_permission,
-    create_default_admin_user
+    get_current_user_token, refresh_access_token, check_user_permission
 )
 from app.core.config import settings
 from app.db.session import get_db
-from app.models.user import User, UserRole, Permission, get_permissions_for_role
+from app.models.user import User, UserRole
 from app.schemas.user import (
     UserCreate, UserResponse, UserUpdate, LoginRequest, Token,
     RefreshTokenRequest, TokenData, PermissionCheck, PermissionResponse,
-    RolePermissions, UserProfile, APIResponse
+    RolePermissions, UserProfile
 )
 
 router = APIRouter()
@@ -230,88 +229,7 @@ async def list_users(
     users = db.query(User).offset(skip).limit(limit).all()
     return [UserResponse.from_orm(user) for user in users]
 
-@router.post("/setup-admin", response_model=APIResponse)
-async def setup_default_admin(db: Session = Depends(get_db)):
-    """Crear usuario administrador por defecto (solo si no existe ningún admin)"""
-    
-    # Verificar si ya existe un admin
-    existing_admin = db.query(User).filter(User.role == UserRole.ADMIN).first()
-    
-    if existing_admin:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Admin user already exists"
-        )
-    
-    # Crear admin por defecto
-    admin_data = create_default_admin_user()
-    hashed_password = get_password_hash(admin_data["password"])
-    
-    admin_user = User(
-        username=admin_data["username"],
-        email=admin_data["email"],
-        full_name=admin_data["full_name"],
-        hashed_password=hashed_password,
-        role=admin_data["role"],
-        is_superuser=admin_data["is_superuser"],
-        is_active=admin_data["is_active"]
-    )
-    
-    db.add(admin_user)
-    db.commit()
-    
-    return APIResponse(
-        success=True,
-        message=f"Default admin user created. Username: {admin_data['username']}, Password: {admin_data['password']}",
-        data={
-            "username": admin_data["username"],
-            "temporary_password": admin_data["password"]
-        }
-    )
 
-# === SIMPLIFIED ENDPOINTS FOR TESTING ===
-
-@router.post("/simple-login")
-async def simple_login(credentials: Dict[str, Any]):
-    """Login simplificado para testing (mantiene compatibilidad)"""
-    username = credentials.get("username")
-    password = credentials.get("password")
-    
-    # Usuarios de prueba para el dashboard web
-    test_users = {
-        "admin": {"password": "admin", "role": "admin", "permissions": ["all"]},
-        "manager": {"password": "manager", "role": "manager", "permissions": ["read", "write"]},
-        "cashier": {"password": "cashier", "role": "cashier", "permissions": ["read", "sale"]},
-        "viewer": {"password": "viewer", "role": "viewer", "permissions": ["read"]}
-    }
-    
-    if username in test_users and password == test_users[username]["password"]:
-        return {
-            "access_token": f"test-token-{username}",
-            "token_type": "bearer",
-            "user": {
-                "username": username,
-                "role": test_users[username]["role"],
-                "permissions": test_users[username]["permissions"]
-            }
-        }
-    
-    raise HTTPException(status_code=401, detail="Invalid credentials")
-
-@router.get("/test-auth")
-async def test_auth(current_user: TokenData = Depends(get_current_user_token)):
-    """Endpoint para probar autenticación JWT"""
-    return {
-        "message": "Authentication successful!",
-        "user": {
-            "id": current_user.user_id,
-            "username": current_user.username,
-            "role": current_user.role.value,
-            "permissions": current_user.permissions,
-            "is_superuser": current_user.is_superuser,
-            "branch_id": current_user.branch_id
-        }
-    }
 
 # === HEALTH AND STATUS ENDPOINTS ===
 

@@ -6,8 +6,9 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from .config import settings
-from ..models.user import User, UserSession, UserRole, Permission, get_permissions_for_role
+from ..models.user import User, UserRole
 from ..schemas.user import TokenData
+from ..models.rbac import Permission
 import secrets
 import uuid
 from functools import wraps

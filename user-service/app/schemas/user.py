@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
-from ..models.user import UserRole, Permission
+from ..models.user import UserRole
 
 # === USER SCHEMAS ===
 
@@ -117,24 +117,6 @@ class RolePermissions(BaseModel):
     permissions: List[str]
     description: str
 
-# === SESSION SCHEMAS ===
-
-class UserSessionResponse(BaseModel):
-    id: int
-    device_id: Optional[str]
-    user_agent: Optional[str]
-    ip_address: Optional[str]
-    created_at: datetime
-    last_activity: datetime
-    expires_at: datetime
-    is_current: bool = False
-    
-    class Config:
-        from_attributes = True
-
-class SessionListResponse(BaseModel):
-    sessions: List[UserSessionResponse]
-    total: int
 
 # === UTILITY SCHEMAS ===
 
